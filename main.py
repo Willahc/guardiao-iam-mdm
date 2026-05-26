@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from database import engine, get_db
 import models
 from datetime import datetime, timezone
+from fastapi.responses import FileResponse
 
 # Cria o banco de dados
 models.Base.metadata.create_all(bind=engine)
@@ -209,3 +210,8 @@ def processar_pulso_do_rh(payload: PayloadRH, authorization: str = Header(None),
     
     else:
         raise HTTPException(status_code=400, detail="Evento de RH não reconhecido.")
+
+# --- ROTA RAIZ: SERVIR O PAINEL VISUAL ---
+@app.get("/")
+def exibir_painel():
+    return FileResponse("painel.html")
