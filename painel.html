@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>O Guardião - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 p-10 font-sans">
+
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-4xl font-bold text-blue-400 mb-2">O Guardião</h1>
+        <p class="text-gray-400 mb-8">Automação de IAM & MDM para Startups (Arquitetura Zero Trust)</p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
+                <h2 class="text-2xl font-semibold mb-4 text-green-400">Novo Colaborador (Onboarding)</h2>
+                <form id="form-onboarding" class="space-y-4">
+                    <div>
+                        <label class="block text-sm text-gray-400">Nome Completo</label>
+                        <input type="text" id="nome" class="w-full p-2 mt-1 bg-gray-700 border border-gray-600 rounded text-white" placeholder="Ex: João Souza" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400">E-mail Corporativo</label>
+                        <input type="email" id="email" class="w-full p-2 mt-1 bg-gray-700 border border-gray-600 rounded text-white" placeholder="joao@startup.com" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400">Departamento / Cargo (RBAC)</label>
+                        <select id="departamento" class="w-full p-2 mt-1 bg-gray-700 border border-gray-600 rounded text-white cursor-pointer focus:border-green-500">
+                            <option value="Vendas">Vendas / Comercial</option>
+                            <option value="TI">TI / Infraestrutura</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400">Serial do Notebook Oficial (MDM)</label>
+                        <input type="text" id="serial" class="w-full p-2 mt-1 bg-gray-700 border border-gray-600 rounded text-white" placeholder="DELL-12345" required>
+                    </div>
+                    <button type="submit" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded transition">
+                        Criar Acessos Customizados (RBAC)
+                    </button>
+                </form>
+            </div>
+
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700 border-t-4 border-t-red-600">
+                <h2 class="text-2xl font-semibold mb-4 text-red-500">Desligamento Crítico</h2>
+                <p class="text-sm text-gray-400 mb-4">Revogue nuvens e bloqueie o notebook instantaneamente.</p>
+                <form id="form-offboarding" class="space-y-4">
+                    <div>
+                        <label class="block text-sm text-gray-400">E-mail Corporativo</label>
+                        <input type="email" id="email_off" class="w-full p-2 mt-1 bg-gray-700 border border-red-900 rounded text-white" placeholder="joao@startup.com" required>
+                    </div>
+                    <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition shadow-[0_0_15px_rgba(220,38,38,0.6)]">
+                        BLOQUEAR ACESSOS E DISPOSITIVO
+                    </button>
+                </form>
+            </div>
+
+            <div class="col-span-1 md:col-span-2 bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700 border-t-4 border-t-blue-500 mt-2">
+                <h2 class="text-2xl font-semibold mb-2 text-blue-400">Simulador de Acesso (Visão do Colaborador)</h2>
+                <p class="text-sm text-gray-400 mb-6">Teste a regra de Zero Trust. Tente logar com um PC Pessoal e veja a porta fechar.</p>
+                
+                <form id="form-login" class="space-y-4 max-w-md">
+                    <div>
+                        <label class="block text-sm text-gray-400">Seu E-mail Corporativo</label>
+                        <input type="email" id="login_email" class="w-full p-2 mt-1 bg-gray-700 border border-gray-600 rounded text-white" required>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm text-gray-400">De onde você está acessando?</label>
+                        <select id="login_cenario" class="w-full p-2 mt-1 bg-gray-700 border border-gray-600 rounded text-white cursor-pointer">
+                            <option value="empresa">💻 Notebook da Empresa (Agente Ativo injetando o serial)</option>
+                            <option value="pessoal">🏠 PC Pessoal (Sem Agente)</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition">
+                        Acessar Sistemas (SSO)
+                    </button>
+                </form>
+            </div>
+
+        </div>
+
+        <div class="mt-8 bg-black p-4 rounded-lg border border-gray-700 font-mono text-sm h-64 overflow-y-auto" id="terminal-logs">
+            <p class="text-green-500">> Sistema iniciado. IAM, MDM e Zero Trust ativados. Aguardando comandos...</p>
+        </div>
+    </div>
+
+    <script>
+        const urlAPI = "http://127.0.0.1:8000/api/v1";
+
+        function adicionarLog(mensagem, cor = "text-gray-300") {
+            const terminal = document.getElementById("terminal-logs");
+            terminal.innerHTML += `<p class="${cor}">> ${mensagem}</p>`;
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        // 1. Gatilho de Onboarding
+        document.getElementById("form-onboarding").addEventListener("submit", async function(e) {
+            e.preventDefault();
+            const dados = {
+                name: document.getElementById("nome").value,
+                email: document.getElementById("email").value,
+                department: document.getElementById("departamento").value,
+                device_serial: document.getElementById("serial").value
+            };
+
+            adicionarLog(`Processando contratação para o departamento de ${dados.department}...`, "text-yellow-400");
+
+            try {
+                const resposta = await fetch(`${urlAPI}/onboarding`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(dados)
+                });
+                const resultado = await resposta.json();
+                
+                if (resposta.status === 500) {
+                     adicionarLog("ERRO DO BANCO: O Serial deste equipamento já está em uso!", "text-red-500 font-bold");
+                } else {
+                    adicionarLog(resultado.message, "text-green-400 font-bold");
+                    resultado.logs.forEach(log => adicionarLog(log, "text-blue-300"));
+                    this.reset();
+                }
+            } catch (erro) {
+                adicionarLog("Erro ao conectar com a API. Verifique se o Uvicorn está rodando.", "text-red-500");
+            }
+        });
+
+        // 2. Gatilho de Offboarding
+        document.getElementById("form-offboarding").addEventListener("submit", async function(e) {
+            e.preventDefault();
+            const emailParaCortar = document.getElementById("email_off").value;
+
+            adicionarLog(`!!! DISPARANDO REVOGAÇÃO TOTAL PARA: ${emailParaCortar} !!!`, "text-red-500 font-bold");
+
+            try {
+                const resposta = await fetch(`${urlAPI}/offboarding`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: emailParaCortar })
+                });
+                const resultado = await resposta.json();
+                
+                if(resposta.status === 404) {
+                    adicionarLog(`ERRO: ${resultado.detail}`, "text-red-500");
+                } else {
+                    adicionarLog(resultado.message, "text-green-400 font-bold");
+                    resultado.logs.forEach(log => adicionarLog(log, "text-red-300"));
+                }
+                this.reset();
+            } catch (erro) {
+                adicionarLog("Erro ao conectar com a API.", "text-red-500");
+            }
+        });
+
+        // 3. Gatilho do Login Zero Trust
+        document.getElementById("form-login").addEventListener("submit", async function(e) {
+            e.preventDefault();
+            const email = document.getElementById("login_email").value;
+            const cenario = document.getElementById("login_cenario").value;
+            
+            // Simula o agente invisível
+            let serialInjetado = "";
+            if (cenario === "empresa") {
+                // Pega o que estiver escrito na caixinha de serial lá de cima (só para testes)
+                serialInjetado = document.getElementById("serial").value || "DELL-TI"; 
+            } else {
+                serialInjetado = "PC-GAMER-DESCONHECIDO";
+            }
+
+            adicionarLog(`Tentativa de Login (SSO) para: ${email}...`, "text-yellow-400");
+            adicionarLog(`Verificando certificado de hardware: [${serialInjetado}]`, "text-gray-500");
+
+            try {
+                const resposta = await fetch(`${urlAPI}/login`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ 
+                        email: email, 
+                        password: "senha_simulada", 
+                        agent_serial: serialInjetado 
+                    })
+                });
+                const resultado = await resposta.json();
+                
+                if (resultado.status === "bloqueado") {
+                    adicionarLog(resultado.message, "text-red-500 font-bold");
+                    adicionarLog(resultado.detalhe, "text-red-400");
+                } else if (resultado.status === "permitido") {
+                    adicionarLog(resultado.message, "text-green-500 font-bold");
+                    adicionarLog(resultado.detalhe, "text-green-400");
+                } else {
+                    adicionarLog(`ERRO: ${resultado.detail}`, "text-red-500");
+                }
+            } catch (erro) {
+                adicionarLog("Erro de conexão com o motor Acesso Condicional.", "text-red-500");
+            }
+        });
+    </script>
+</body>
+</html>
