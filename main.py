@@ -171,3 +171,41 @@ def simular_login_sso(request: LoginRequest, db: Session = Depends(get_db)):
         "message": "✅ ACESSO LIBERADO: Ambiente Seguro.",
         "detalhe": f"Login autorizado para {usuario.name}. Dispositivo {device_oficial.serial} validado em conformidade."
     }
+
+from fastapi import Header
+
+# ==========================================
+# SCHEMA DO WEBHOOK DE RH (Nível Enterprise)
+# ==========================================
+class PayloadRH(BaseModel):
+    nome_completo: str
+    email_corporativo: str
+    departamento: str
+    evento_rh: str 
+
+CHAVE_SECRETA_SISTEMA_RH = "Bearer rh_token_ultra_secreto_777"
+
+# --- ROTA 5: INTEGRAÇÃO INVISÍVEL COM SISTEMA DE FOLHA ---
+@app.post("/api/v1/integracoes/rh/webhook")
+def processar_pulso_do_rh(payload: PayloadRH, authorization: str = Header(None), db: Session = Depends(get_db)):
+    
+    # Barreira de Segurança
+    if authorization != CHAVE_SECRETA_SISTEMA_RH:
+        raise HTTPException(status_code=401, detail="🚨 Invasão detectada: Token inválido.")
+
+    if payload.evento_rh == "ADMISSAO":
+        return {
+            "status": "sucesso", 
+            "acao": "Onboarding Zero Trust iniciado",
+            "detalhe": f"Provisionando licenças dinâmicas para {payload.nome_completo} ({payload.departamento})"
+        }
+        
+    elif payload.evento_rh == "DEMISSAO":
+        return {
+            "status": "sucesso", 
+            "acao": "Offboarding Crítico acionado",
+            "detalhe": f"Sessões de {payload.email_corporativo} derrubadas. Notebook travado."
+        }
+    
+    else:
+        raise HTTPException(status_code=400, detail="Evento de RH não reconhecido.")

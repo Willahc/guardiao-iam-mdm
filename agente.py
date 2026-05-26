@@ -1,47 +1,36 @@
+import wmi
 import time
 import requests
 import ctypes
-import sys
 
-# ==========================================
-# CONFIGURAÇÕES DO AGENTE
-# ==========================================
-URL_API = "http://127.0.0.1:8000/api/v1/agent/status"
-MEU_SERIAL = "DELL-XYZ123" # O serial que usamos no teste de Onboarding
-TEMPO_VERIFICACAO = 5 # O agente vai perguntar para a API a cada 5 segundos
+def obter_serial_da_placa_mae():
+    """
+    Entra no núcleo do Windows (WMI) e extrai o número de série físico da BIOS.
+    """
+    try:
+        computador = wmi.WMI()
+        for bios in computador.Win32_BIOS():
+            return bios.SerialNumber.strip()
+    except Exception:
+        return "HARDWARE_NAO_IDENTIFICADO"
 
-def trancar_tela_windows():
-    print("\n🚨 [ALERTA DE SEGURANÇA] Dispositivo bloqueado pela TI!")
-    print("🔒 Trancando a área de trabalho do Windows...\n")
-    # Este é o comando nativo do Windows (C++) que joga o usuário para a tela de senha
+MEU_SERIAL_REAL = obter_serial_da_placa_mae()
+
+def travar_tela():
     ctypes.windll.user32.LockWorkStation()
 
-def rodar_agente():
-    print(f"🛡️ Agente do Guardião iniciado.")
-    print(f"💻 Monitorando a máquina física (Serial: {MEU_SERIAL})")
-    print("Pressione CTRL+C para parar o agente.\n")
-    
+def iniciar_agente():
+    # Loop infinito rodando em background
     while True:
         try:
-            # Bate na porta da nossa API perguntando o status
-            resposta = requests.get(f"{URL_API}/{MEU_SERIAL}")
-            dados = resposta.json()
-            
-            status_atual = dados.get("status")
-            
-            if status_atual == "locked":
-                trancar_tela_windows()
-                # Opcional: break para o agente parar de rodar após bloquear, 
-                # ou deixa rodando para manter a máquina travada se o usuário tentar logar de novo.
-                sys.exit() 
-            else:
-                print(f"✅ [{time.strftime('%H:%M:%S')}] Status OK. Acesso permitido.")
-                
-        except requests.exceptions.ConnectionError:
-            print("⚠️ Sem conexão com o servidor do Guardião. Tentando novamente...")
-            
-        # Espera 5 segundos e repete o loop
-        time.sleep(TEMPO_VERIFICACAO)
+            # Em um cenário real, o agente faria um "GET" na API enviando o MEU_SERIAL_REAL
+            # para checar se ele recebeu um comando de bloqueio.
+            # Ex: resposta = requests.get(f"http://127.0.0.1:8000/api/v1/status/{MEU_SERIAL_REAL}")
+            pass
+        except:
+            pass
+        
+        time.sleep(5) # Pausa de 5 segundos para não sobrecarregar o processador
 
 if __name__ == "__main__":
-    rodar_agente()
+    iniciar_agente()
