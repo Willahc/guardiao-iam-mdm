@@ -1,10 +1,13 @@
-from datetime import timedelta
+import logging
+from datetime import datetime, timedelta, timezone
+from typing import Optional
 
-from fastapi import FastAPI, Depends, HTTPException, Header
+from fastapi import FastAPI, Depends, HTTPException, Header, Query
 from fastapi.responses import FileResponse
 from jose import JWTError, jwt
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from sqlalchemy import func as sa_func
 
 import models
 from auth import (
@@ -17,6 +20,10 @@ from auth import (
     ALGORITHM,
 )
 from database import engine, get_db
+from services.tickets import gerar_tickets_sem_api
+from services.email import enviar_notificacao_ticket
+
+logger = logging.getLogger(__name__)
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -57,6 +64,14 @@ class RegistroEmpresa(BaseModel):
     nome_admin: str
     email_admin: str
     senha_admin: str
+
+
+class GerarTicketsRequest(BaseModel):
+    colaborador_nome: str
+    colaborador_email: str
+    tipo: str
+    departamento: str
+    sistemas: list[str]
 
 
 # ==========================================
@@ -189,3 +204,134 @@ def processar_pulso_do_rh(
         }
     else:
         raise HTTPException(status_code=400, detail="Evento de RH não documentado.")
+
+
+# ==========================================
+# ROTAS: TICKETS DE TAREFA
+# ==========================================
+@app.post("/api/v1/tickets/gerar", tags=["Tickets"])
+def gerar_tickets(
+    dados: GerarTicketsRequest,
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(get_usuario_atual),
+):
+    if dados.tipo not in ("ADMISSAO", "DEMISSAO"):
+        raise HTTPException(status_code=400, detail="Tipo deve ser ADMISSAO ou DEMISSAO")
+    if not dados.sistemas:
+        raise HTTPException(status_code=400, detail="Informe ao menos um sistema")
+
+    tickets = gerar_tickets_sem_api(
+        colaborador_nome=dados.colaborador_nome,
+        colaborador_email=dados.colaborador_email,
+        tipo=dados.tipo,
+        empresa_id=usuario_atual.empresa_id,
+        departamento=dados.departamento,
+        sistemas=dados.sistemas,
+        db=db,
+    )
+
+    for ticket in tickets:
+        enviar_notificacao_ticket(ticket, usuario_atual.email)
+
+    return {
+        "status": "sucesso",
+        "tickets": [
+            {
+                "id": t.id,
+                "sistema": t.sistema,
+                "tipo": t.tipo,
+                "instrucoes": t.instrucoes,
+                "status": t.status,
+                "criado_em": t.criado_em.isoformat() if t.criado_em else None,
+            }
+            for t in tickets
+        ],
+    }
+
+
+@app.get("/api/v1/tickets", tags=["Tickets"])
+def listar_tickets(
+    status: Optional[str] = Query(None),
+    tipo: Optional[str] = Query(None),
+    sistema: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(get_usuario_atual),
+):
+    query = db.query(models.TicketTarefa).filter(
+        models.TicketTarefa.empresa_id == usuario_atual.empresa_id
+    )
+    if status:
+        query = query.filter(models.TicketTarefa.status == status)
+    if tipo:
+        query = query.filter(models.TicketTarefa.tipo == tipo)
+    if sistema:
+        query = query.filter(models.TicketTarefa.sistema == sistema)
+
+    tickets = query.order_by(models.TicketTarefa.criado_em.desc()).all()
+
+    return [
+        {
+            "id": t.id,
+            "colaborador_nome": t.colaborador_nome,
+            "colaborador_email": t.colaborador_email,
+            "tipo": t.tipo,
+            "sistema": t.sistema,
+            "instrucoes": t.instrucoes,
+            "status": t.status,
+            "criado_em": t.criado_em.isoformat() if t.criado_em else None,
+            "fechado_em": t.fechado_em.isoformat() if t.fechado_em else None,
+            "fechado_por": t.fechado_por,
+        }
+        for t in tickets
+    ]
+
+
+@app.patch("/api/v1/tickets/{ticket_id}/fechar", tags=["Tickets"])
+def fechar_ticket(
+    ticket_id: str,
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(get_usuario_atual),
+):
+    ticket = db.query(models.TicketTarefa).filter(
+        models.TicketTarefa.id == ticket_id,
+        models.TicketTarefa.empresa_id == usuario_atual.empresa_id,
+    ).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket não encontrado")
+    if ticket.status == "FECHADO":
+        raise HTTPException(status_code=400, detail="Ticket já está fechado")
+
+    ticket.status = "FECHADO"
+    ticket.fechado_em = datetime.now(timezone.utc)
+    ticket.fechado_por = usuario_atual.email
+    db.commit()
+    db.refresh(ticket)
+
+    return {
+        "id": ticket.id,
+        "sistema": ticket.sistema,
+        "status": ticket.status,
+        "fechado_em": ticket.fechado_em.isoformat(),
+        "fechado_por": ticket.fechado_por,
+    }
+
+
+@app.get("/api/v1/tickets/stats", tags=["Tickets"])
+def stats_tickets(
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(get_usuario_atual),
+):
+    base = db.query(models.TicketTarefa).filter(
+        models.TicketTarefa.empresa_id == usuario_atual.empresa_id
+    )
+    total = base.count()
+    abertos = base.filter(models.TicketTarefa.status == "ABERTO").count()
+    em_andamento = base.filter(models.TicketTarefa.status == "EM_ANDAMENTO").count()
+    fechados = base.filter(models.TicketTarefa.status == "FECHADO").count()
+
+    return {
+        "total": total,
+        "abertos": abertos,
+        "em_andamento": em_andamento,
+        "fechados": fechados,
+    }

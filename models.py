@@ -1,3 +1,5 @@
+import uuid
+
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, JSON
 from sqlalchemy.sql import func
 
@@ -67,6 +69,22 @@ class User(Base):
     cargo_id = Column(Integer, ForeignKey("cargos.id"))
     device_id = Column(Integer, ForeignKey("devices.id"), unique=True)
     status = Column(String, default="active")
+
+
+class TicketTarefa(Base):
+    __tablename__ = "tickets_tarefa"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    empresa_id = Column(Integer, ForeignKey("empresas.id"), nullable=False)
+    colaborador_nome = Column(String, nullable=False)
+    colaborador_email = Column(String, nullable=False)
+    tipo = Column(String, nullable=False)
+    sistema = Column(String, nullable=False)
+    instrucoes = Column(String, nullable=False)
+    status = Column(String, default="ABERTO")
+    criado_em = Column(DateTime(timezone=True), server_default=func.now())
+    fechado_em = Column(DateTime(timezone=True), nullable=True)
+    fechado_por = Column(String, nullable=True)
 
 
 class AuditLog(Base):
