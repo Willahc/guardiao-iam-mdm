@@ -6,3 +6,4 @@ python-jose[cryptography]
 bcrypt
 python-dotenv
 alembic
+psycopg2-binary
