@@ -26,6 +26,9 @@ from auth import (
 from database import engine, get_db
 from services.tickets import gerar_tickets_sem_api
 from services.email import enviar_notificacao_ticket
+from services.slack_service import enviar_mensagem_boas_vindas, notificar_offboarding
+from services.github_service import adicionar_membro_org, remover_membro_org, listar_membros_org
+from services.jira_service import criar_issue as jira_criar_issue, criar_ticket_offboarding
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +36,8 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="O Guardião - Enterprise IAM & MDM",
-    version="2.0",
-    description="Motor central de governança de acessos e blindagem de hardware.",
+    version="2.5",
+    description="Motor central de governança de acessos e blindagem de hardware. Integrações: Slack, GitHub, Jira.",
 )
 
 
@@ -94,6 +97,23 @@ class AgentePingRequest(BaseModel):
 
 class UpgradePlanoRequest(BaseModel):
     plano: str
+
+
+class SlackBoasVindasRequest(BaseModel):
+    email: str
+    nome: str
+    departamento: str
+
+
+class GitHubAdicionarRequest(BaseModel):
+    github_username: str
+
+
+class JiraTicketRequest(BaseModel):
+    colaborador_nome: str
+    email: str
+    tipo: str
+    sistemas: list[str]
 
 
 PLANOS_CONFIG = {
@@ -210,15 +230,26 @@ def executar_onboarding_manual(
     )
     db.add(novo_registro)
     db.commit()
-    registrar_auditoria(db, usuario_atual.empresa_id, "ONBOARDING", usuario_atual.email, dados.email, {"departamento": dados.departamento})
+
+    integ_log = {}
+
+    try:
+        enviado = enviar_mensagem_boas_vindas(dados.email, dados.email, dados.departamento)
+        integ_log["slack"] = "enviado" if enviado else "usuário não encontrado no Slack"
+    except Exception as exc:
+        logger.error("Falha integração Slack onboarding: %s", exc)
+        integ_log["slack"] = f"erro: {exc}"
+
+    registrar_auditoria(
+        db, usuario_atual.empresa_id, "ONBOARDING", usuario_atual.email, dados.email,
+        {"departamento": dados.departamento, "integracoes": integ_log},
+    )
 
     return {
         "status": "sucesso",
-        "logs": [
-            f"Usuário {dados.email} criado no Google Workspace.",
-            f"Adicionado aos canais de {dados.departamento} no Slack.",
-            "Licença do AutoCAD/Revit provisionada com sucesso.",
-        ],
+        "email": dados.email,
+        "departamento": dados.departamento,
+        "integracoes": integ_log,
     }
 
 
@@ -231,9 +262,46 @@ def acionar_guilhotina_mdm(
     db: Session = Depends(get_db),
     usuario_atual: models.Usuario = Depends(get_usuario_atual),
 ):
+    integ_log = {}
+
+    dispositivo = db.query(models.Dispositivo).filter(
+        models.Dispositivo.serial_placa_mae == comando.serial_placa_mae,
+        models.Dispositivo.empresa_id == usuario_atual.empresa_id,
+    ).first()
+
+    colaborador_email = None
+    colaborador_nome = None
+    if dispositivo and dispositivo.usuario_id:
+        usuario_disp = db.query(models.Usuario).filter(models.Usuario.id == dispositivo.usuario_id).first()
+        if usuario_disp:
+            colaborador_email = usuario_disp.email
+            colaborador_nome = usuario_disp.nome
+
+            try:
+                slack_ok = notificar_offboarding(colaborador_email, colaborador_nome)
+                integ_log["slack"] = "notificado" if slack_ok else "usuário não encontrado no Slack"
+            except Exception as exc:
+                logger.error("Falha integração Slack offboarding: %s", exc)
+                integ_log["slack"] = f"erro: {exc}"
+
+            try:
+                jira_result = criar_ticket_offboarding(
+                    colaborador_nome, colaborador_email, ["Dispositivo MDM", "Rede corporativa"],
+                )
+                integ_log["jira"] = jira_result.get("issue_key") or jira_result.get("erro", "falha")
+            except Exception as exc:
+                logger.error("Falha integração Jira offboarding: %s", exc)
+                integ_log["jira"] = f"erro: {exc}"
+
+    registrar_auditoria(
+        db, usuario_atual.empresa_id, "DEVICE_LOCK_OFFBOARDING", usuario_atual.email,
+        colaborador_email, {"serial": comando.serial_placa_mae, "integracoes": integ_log},
+    )
+
     return {
         "status": "sucesso",
         "alerta": f"Comando de bloqueio absoluto enviado para o hardware {comando.serial_placa_mae}.",
+        "integracoes": integ_log,
     }
 
 
@@ -400,6 +468,88 @@ def stats_tickets(
         "em_andamento": em_andamento,
         "fechados": fechados,
     }
+
+
+# ==========================================
+# ROTAS: INTEGRAÇÕES (Slack, GitHub, Jira)
+# ==========================================
+@app.post("/api/v1/integracoes/slack/boas-vindas", tags=["Integrações"])
+def slack_boas_vindas(
+    dados: SlackBoasVindasRequest,
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(get_usuario_atual),
+):
+    enviado = enviar_mensagem_boas_vindas(dados.email, dados.nome, dados.departamento)
+    registrar_auditoria(
+        db, usuario_atual.empresa_id, "SLACK_BOAS_VINDAS", usuario_atual.email,
+        dados.email, {"enviado": enviado, "departamento": dados.departamento},
+    )
+    return {
+        "enviado": enviado,
+        "mensagem": "Mensagem enviada com sucesso" if enviado else "Usuário não encontrado no Slack ou token não configurado",
+    }
+
+
+@app.post("/api/v1/integracoes/github/adicionar", tags=["Integrações"])
+def github_adicionar(
+    dados: GitHubAdicionarRequest,
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(get_usuario_atual),
+):
+    resultado = adicionar_membro_org(dados.github_username)
+    registrar_auditoria(
+        db, usuario_atual.empresa_id, "GITHUB_ADD_MEMBER", usuario_atual.email,
+        detalhes={"username": dados.github_username, "resultado": resultado},
+    )
+    return resultado
+
+
+@app.delete("/api/v1/integracoes/github/remover/{username}", tags=["Integrações"])
+def github_remover(
+    username: str,
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(get_usuario_atual),
+):
+    resultado = remover_membro_org(username)
+    registrar_auditoria(
+        db, usuario_atual.empresa_id, "GITHUB_REMOVE_MEMBER", usuario_atual.email,
+        detalhes={"username": username, "resultado": resultado},
+    )
+    return resultado
+
+
+@app.get("/api/v1/integracoes/github/membros", tags=["Integrações"])
+def github_membros(
+    usuario_atual: models.Usuario = Depends(get_usuario_atual),
+):
+    return listar_membros_org()
+
+
+@app.post("/api/v1/integracoes/jira/ticket", tags=["Integrações"])
+def jira_ticket(
+    dados: JiraTicketRequest,
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(get_usuario_atual),
+):
+    if dados.tipo not in ("ADMISSAO", "DEMISSAO"):
+        raise HTTPException(status_code=400, detail="Tipo deve ser ADMISSAO ou DEMISSAO")
+    if not dados.sistemas:
+        raise HTTPException(status_code=400, detail="Informe ao menos um sistema")
+
+    if dados.tipo == "DEMISSAO":
+        resultado = criar_ticket_offboarding(dados.colaborador_nome, dados.email, dados.sistemas)
+    else:
+        lista = ", ".join(dados.sistemas)
+        resultado = jira_criar_issue(
+            summary=f"ADMISSÃO: {dados.colaborador_nome} ({dados.email})",
+            description=f"Provisionar acessos para {dados.colaborador_nome} ({dados.email}) nos sistemas: {lista}",
+        )
+
+    registrar_auditoria(
+        db, usuario_atual.empresa_id, "JIRA_TICKET_CRIADO", usuario_atual.email,
+        dados.email, {"tipo": dados.tipo, "issue_key": resultado.get("issue_key"), "sistemas": dados.sistemas},
+    )
+    return resultado
 
 
 # ==========================================
