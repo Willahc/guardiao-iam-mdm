@@ -1,3 +1,4 @@
+import hashlib
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -91,6 +92,29 @@ class AgentePingRequest(BaseModel):
     hostname: Optional[str] = None
 
 
+class UpgradePlanoRequest(BaseModel):
+    plano: str
+
+
+PLANOS_CONFIG = {
+    "STARTER": {"valor_por_usuario": 2900, "descricao": "Tickets + Agente Básico"},
+    "PRO": {"valor_por_usuario": 4900, "descricao": "+ LGPD + Auditoria + Dispositivos Ilimitados"},
+    "ENTERPRISE": {"valor_por_usuario": 0, "descricao": "Sob consulta"},
+}
+
+
+def registrar_auditoria(db: Session, empresa_id: int, acao: str, executado_por: str, colaborador_email: str = None, detalhes: dict = None):
+    registro = models.RegistroAuditoria(
+        empresa_id=empresa_id,
+        acao=acao,
+        executado_por=executado_por,
+        colaborador_email=colaborador_email,
+        detalhes=detalhes,
+    )
+    db.add(registro)
+    db.commit()
+
+
 # ==========================================
 # ROTA: FRONT-END VISUAL (sem auth)
 # ==========================================
@@ -134,6 +158,7 @@ def login(dados: LoginRequest, db: Session = Depends(get_db)):
         data={"sub": usuario.email, "empresa_id": usuario.empresa_id, "role": usuario.role},
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
     )
+    registrar_auditoria(db, usuario.empresa_id, "LOGIN", usuario.email)
     return {"access_token": access_token, "token_type": "bearer"}
 
 
@@ -185,6 +210,7 @@ def executar_onboarding_manual(
     )
     db.add(novo_registro)
     db.commit()
+    registrar_auditoria(db, usuario_atual.empresa_id, "ONBOARDING", usuario_atual.email, dados.email, {"departamento": dados.departamento})
 
     return {
         "status": "sucesso",
@@ -344,6 +370,7 @@ def fechar_ticket(
     ticket.fechado_por = usuario_atual.email
     db.commit()
     db.refresh(ticket)
+    registrar_auditoria(db, usuario_atual.empresa_id, "TICKET_FECHADO", usuario_atual.email, ticket.colaborador_email, {"ticket_id": ticket.id, "sistema": ticket.sistema})
 
     return {
         "id": ticket.id,
@@ -478,6 +505,7 @@ def bloquear_dispositivo(
     dispositivo.status = "BLOQUEADO"
     db.commit()
     db.refresh(dispositivo)
+    registrar_auditoria(db, admin.empresa_id, "DEVICE_LOCK", admin.email, detalhes={"serial": serial, "hostname": dispositivo.hostname})
 
     return {
         "status": "sucesso",
@@ -506,6 +534,7 @@ def desbloquear_dispositivo(
     dispositivo.status = "ATIVO"
     db.commit()
     db.refresh(dispositivo)
+    registrar_auditoria(db, admin.empresa_id, "DEVICE_UNLOCK", admin.email, detalhes={"serial": serial, "hostname": dispositivo.hostname})
 
     return {
         "status": "sucesso",
@@ -547,3 +576,230 @@ def listar_dispositivos(
         })
 
     return resultado
+
+
+# ==========================================
+# ROTAS: LGPD
+# ==========================================
+@app.delete("/api/v1/lgpd/titular/{email}", tags=["LGPD"])
+def anonimizar_titular(
+    email: str,
+    db: Session = Depends(get_db),
+    admin: models.Usuario = Depends(require_admin),
+):
+    email_hash = hashlib.sha256(email.encode()).hexdigest()[:16] + "@anonimizado"
+    count = 0
+
+    registros = db.query(models.RegistroAcesso).filter(
+        models.RegistroAcesso.email == email,
+        models.RegistroAcesso.empresa_id == admin.empresa_id,
+    ).all()
+    for r in registros:
+        r.email = email_hash
+        count += 1
+
+    tickets = db.query(models.TicketTarefa).filter(
+        models.TicketTarefa.colaborador_email == email,
+        models.TicketTarefa.empresa_id == admin.empresa_id,
+    ).all()
+    for t in tickets:
+        t.colaborador_nome = "ANONIMIZADO"
+        t.colaborador_email = email_hash
+        t.instrucoes = "Dados anonimizados por solicitação LGPD"
+        count += 1
+
+    dispositivos = db.query(models.Dispositivo).filter(
+        models.Dispositivo.empresa_id == admin.empresa_id,
+    ).join(models.Usuario, models.Dispositivo.usuario_id == models.Usuario.id).filter(
+        models.Usuario.email == email,
+    ).all()
+    for d in dispositivos:
+        d.usuario_id = None
+        count += 1
+
+    usuario = db.query(models.Usuario).filter(
+        models.Usuario.email == email,
+        models.Usuario.empresa_id == admin.empresa_id,
+    ).first()
+    if usuario:
+        usuario.nome = "ANONIMIZADO"
+        usuario.email = email_hash
+        usuario.ativo = False
+        count += 1
+
+    db.commit()
+    registrar_auditoria(db, admin.empresa_id, "LGPD_ANONIMIZACAO", admin.email, email, {"registros_anonimizados": count})
+
+    return {"status": "sucesso", "anonimizados": count, "email_hash": email_hash}
+
+
+@app.get("/api/v1/lgpd/exportar/{email}", tags=["LGPD"])
+def exportar_dados_titular(
+    email: str,
+    db: Session = Depends(get_db),
+    admin: models.Usuario = Depends(require_admin),
+):
+    usuario = db.query(models.Usuario).filter(
+        models.Usuario.email == email,
+        models.Usuario.empresa_id == admin.empresa_id,
+    ).first()
+
+    registros = db.query(models.RegistroAcesso).filter(
+        models.RegistroAcesso.email == email,
+        models.RegistroAcesso.empresa_id == admin.empresa_id,
+    ).all()
+
+    tickets = db.query(models.TicketTarefa).filter(
+        models.TicketTarefa.colaborador_email == email,
+        models.TicketTarefa.empresa_id == admin.empresa_id,
+    ).all()
+
+    dispositivos = []
+    if usuario:
+        dispositivos = db.query(models.Dispositivo).filter(
+            models.Dispositivo.usuario_id == usuario.id,
+            models.Dispositivo.empresa_id == admin.empresa_id,
+        ).all()
+
+    registrar_auditoria(db, admin.empresa_id, "LGPD_EXPORTACAO", admin.email, email)
+
+    return {
+        "titular": email,
+        "dados_pessoais": {
+            "nome": usuario.nome if usuario else None,
+            "email": usuario.email if usuario else email,
+            "departamento": usuario.departamento if usuario else None,
+            "role": usuario.role if usuario else None,
+            "ativo": usuario.ativo if usuario else None,
+        },
+        "registros_acesso": [
+            {"email": r.email, "setor": r.setor, "status": r.status, "criado_em": r.criado_em.isoformat() if r.criado_em else None}
+            for r in registros
+        ],
+        "tickets": [
+            {"id": t.id, "tipo": t.tipo, "sistema": t.sistema, "status": t.status, "criado_em": t.criado_em.isoformat() if t.criado_em else None}
+            for t in tickets
+        ],
+        "dispositivos": [
+            {"id": d.id, "hostname": d.hostname, "serial_placa_mae": d.serial_placa_mae, "status": d.status}
+            for d in dispositivos
+        ],
+    }
+
+
+@app.get("/api/v1/lgpd/auditoria", tags=["LGPD"])
+def listar_auditoria(
+    db: Session = Depends(get_db),
+    admin: models.Usuario = Depends(require_admin),
+):
+    registros = db.query(models.RegistroAuditoria).filter(
+        models.RegistroAuditoria.empresa_id == admin.empresa_id,
+    ).order_by(models.RegistroAuditoria.timestamp.desc()).limit(200).all()
+
+    return [
+        {
+            "id": r.id,
+            "acao": r.acao,
+            "executado_por": r.executado_por,
+            "colaborador_email": r.colaborador_email,
+            "detalhes": r.detalhes,
+            "timestamp": r.timestamp.isoformat() if r.timestamp else None,
+        }
+        for r in registros
+    ]
+
+
+# ==========================================
+# ROTAS: BILLING
+# ==========================================
+@app.get("/api/v1/billing/plano", tags=["Billing"])
+def obter_plano(
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(get_usuario_atual),
+):
+    plano = db.query(models.PlanoEmpresa).filter(
+        models.PlanoEmpresa.empresa_id == usuario_atual.empresa_id,
+    ).first()
+
+    usuarios_ativos = db.query(models.Usuario).filter(
+        models.Usuario.empresa_id == usuario_atual.empresa_id,
+        models.Usuario.ativo == True,
+    ).count()
+
+    if not plano:
+        plano_nome = "STARTER"
+        valor = PLANOS_CONFIG["STARTER"]["valor_por_usuario"]
+    else:
+        plano_nome = plano.plano
+        valor = plano.valor_por_usuario
+
+    return {
+        "plano": plano_nome,
+        "descricao": PLANOS_CONFIG.get(plano_nome, {}).get("descricao", ""),
+        "usuarios_ativos": usuarios_ativos,
+        "valor_por_usuario_centavos": valor,
+        "valor_por_usuario_display": f"R${valor / 100:.2f}",
+        "estimativa_mensal_centavos": valor * usuarios_ativos,
+        "estimativa_mensal_display": f"R${(valor * usuarios_ativos) / 100:.2f}",
+    }
+
+
+@app.post("/api/v1/billing/upgrade", tags=["Billing"])
+def upgrade_plano(
+    dados: UpgradePlanoRequest,
+    db: Session = Depends(get_db),
+    admin: models.Usuario = Depends(require_admin),
+):
+    if dados.plano not in PLANOS_CONFIG:
+        raise HTTPException(status_code=400, detail=f"Plano inválido. Opções: {', '.join(PLANOS_CONFIG.keys())}")
+    if dados.plano == "ENTERPRISE":
+        raise HTTPException(status_code=400, detail="Plano Enterprise requer contato comercial")
+
+    config = PLANOS_CONFIG[dados.plano]
+
+    plano = db.query(models.PlanoEmpresa).filter(
+        models.PlanoEmpresa.empresa_id == admin.empresa_id,
+    ).first()
+
+    if plano:
+        plano.plano = dados.plano
+        plano.valor_por_usuario = config["valor_por_usuario"]
+    else:
+        plano = models.PlanoEmpresa(
+            empresa_id=admin.empresa_id,
+            plano=dados.plano,
+            valor_por_usuario=config["valor_por_usuario"],
+            proximo_vencimento=datetime.now(timezone.utc) + timedelta(days=30),
+        )
+        db.add(plano)
+
+    db.commit()
+    db.refresh(plano)
+
+    usuarios_ativos = db.query(models.Usuario).filter(
+        models.Usuario.empresa_id == admin.empresa_id,
+        models.Usuario.ativo == True,
+    ).count()
+
+    registrar_auditoria(db, admin.empresa_id, "BILLING_UPGRADE", admin.email, detalhes={"plano": dados.plano})
+
+    return {
+        "status": "sucesso",
+        "plano": plano.plano,
+        "descricao": config["descricao"],
+        "valor_por_usuario_display": f"R${config['valor_por_usuario'] / 100:.2f}",
+        "usuarios_ativos": usuarios_ativos,
+        "estimativa_mensal_display": f"R${(config['valor_por_usuario'] * usuarios_ativos) / 100:.2f}",
+    }
+
+
+@app.get("/api/v1/billing/usuarios-ativos", tags=["Billing"])
+def contar_usuarios_ativos(
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(get_usuario_atual),
+):
+    count = db.query(models.Usuario).filter(
+        models.Usuario.empresa_id == usuario_atual.empresa_id,
+        models.Usuario.ativo == True,
+    ).count()
+    return {"usuarios_ativos": count}

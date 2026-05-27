@@ -1,203 +1,391 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>O Guardião - Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>O Guardiao - Painel RH</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#1a1a2e;--card:#16213e;--primary:#0f3460;--danger:#e94560;--success:#27ae60;--warn:#f39c12;--text:#e0e0e0;--muted:#8892a4}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+input,select,button,textarea{font-family:inherit;font-size:.95rem}
+input,select{background:#0d1b36;border:1px solid #2a3a5c;color:var(--text);padding:.6rem .8rem;border-radius:6px;width:100%}
+input:focus,select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 2px rgba(15,52,96,.4)}
+button{cursor:pointer;border:none;padding:.65rem 1.2rem;border-radius:6px;font-weight:600;transition:opacity .15s}
+button:hover{opacity:.88}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-success{background:var(--success);color:#fff}
+.btn-sm{padding:.4rem .8rem;font-size:.82rem}
+.card{background:var(--card);border-radius:10px;padding:1.5rem;margin-bottom:1rem}
+.badge{display:inline-block;padding:.2rem .6rem;border-radius:20px;font-size:.75rem;font-weight:700;text-transform:uppercase}
+.badge-green{background:#27ae6033;color:#2ecc71}
+.badge-yellow{background:#f39c1233;color:#f1c40f}
+.badge-red{background:#e9456033;color:#e94560}
+.badge-gray{background:#8892a433;color:#8892a4}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th{text-align:left;padding:.6rem .5rem;color:var(--muted);border-bottom:1px solid #2a3a5c;font-weight:600}
+td{padding:.55rem .5rem;border-bottom:1px solid #1a2540}
+label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:.3rem}
+.form-group{margin-bottom:1rem}
+.stats-row{display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1.2rem}
+.stat-card{flex:1;min-width:120px;background:#0d1b36;border-radius:8px;padding:1rem;text-align:center}
+.stat-card .num{font-size:1.8rem;font-weight:700}
+.stat-card .lbl{font-size:.78rem;color:var(--muted);margin-top:.2rem}
+.tabs{display:flex;gap:0;border-bottom:2px solid #2a3a5c;margin-bottom:1.5rem;overflow-x:auto}
+.tab{padding:.7rem 1.4rem;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap;font-weight:500;transition:color .15s}
+.tab:hover{color:var(--text)}
+.tab.active{color:#fff;border-bottom-color:var(--primary)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+.log-area{background:#0a0f1e;border:1px solid #1a2540;border-radius:8px;padding:1rem;font-family:'Courier New',monospace;font-size:.82rem;max-height:250px;overflow-y:auto;margin-top:1rem}
+.log-area p{margin:.3rem 0}
+.log-ok{color:#2ecc71}
+.log-err{color:#e94560}
+.log-info{color:#3498db}
+.log-warn{color:#f39c12}
+.container{max-width:1100px;margin:0 auto;padding:1.5rem}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:.8rem}
+header h1{font-size:1.6rem;color:#fff}
+header h1 span{color:var(--primary)}
+.check-row{display:flex;flex-wrap:wrap;gap:.8rem}
+.check-row label{display:flex;align-items:center;gap:.4rem;color:var(--text);cursor:pointer;font-size:.9rem}
+.check-row input[type=checkbox]{width:auto;accent-color:var(--primary)}
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1rem}
+#login-box{width:100%;max-width:400px}
+#app-screen{display:none}
+@media(max-width:768px){.container{padding:1rem}.stats-row{gap:.6rem}.stat-card{min-width:80px;padding:.7rem}.stat-card .num{font-size:1.3rem}th,td{padding:.4rem .3rem;font-size:.8rem}.tab{padding:.55rem .9rem;font-size:.88rem}}
+</style>
 </head>
-<body class="bg-gray-900 text-gray-100 p-10 font-sans">
+<body>
 
-    <div class="max-w-4xl mx-auto">
-        <h1 class="text-4xl font-bold text-blue-400 mb-2">O Guardião</h1>
-        <p class="text-gray-400 mb-8">Automação de IAM & MDM para Startups (Arquitetura Zero Trust)</p>
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+<div id="login-box" class="card">
+  <h1 style="font-size:1.6rem;margin-bottom:.3rem;color:#fff">O <span style="color:var(--primary)">Guardiao</span></h1>
+  <p style="color:var(--muted);font-size:.88rem;margin-bottom:1.5rem">Painel de Governanca de Acessos</p>
+  <form id="form-login">
+    <div class="form-group"><label>Email</label><input type="email" id="login-email" required placeholder="admin@empresa.com"></div>
+    <div class="form-group"><label>Senha</label><input type="password" id="login-senha" required placeholder="Sua senha"></div>
+    <button type="submit" class="btn-primary" style="width:100%">Entrar</button>
+    <p id="login-error" style="color:var(--danger);font-size:.85rem;margin-top:.8rem;display:none"></p>
+  </form>
+</div>
+</div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-            
-            <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
-                <h2 class="text-2xl font-semibold mb-4 text-green-400">Novo Colaborador (Onboarding)</h2>
-                <form id="form-onboarding" class="space-y-4">
-                    <div>
-                        <label class="block text-sm text-gray-400">Nome Completo</label>
-                        <input type="text" id="nome" class="w-full p-2 mt-1 bg-gray-700 border border-gray-600 rounded text-white" placeholder="Ex: João Souza" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm text-gray-400">E-mail Corporativo</label>
-                        <input type="email" id="email" class="w-full p-2 mt-1 bg-gray-700 border border-gray-600 rounded text-white" placeholder="joao@startup.com" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm text-gray-400">Departamento / Cargo (RBAC)</label>
-                        <select id="departamento" class="w-full p-2 mt-1 bg-gray-700 border border-gray-600 rounded text-white cursor-pointer focus:border-green-500">
-                            <option value="Vendas">Vendas / Comercial</option>
-                            <option value="TI">TI / Infraestrutura</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm text-gray-400">Serial do Notebook Oficial (MDM)</label>
-                        <input type="text" id="serial" class="w-full p-2 mt-1 bg-gray-700 border border-gray-600 rounded text-white" placeholder="DELL-12345" required>
-                    </div>
-                    <button type="submit" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded transition">
-                        Criar Acessos Customizados (RBAC)
-                    </button>
-                </form>
-            </div>
+<!-- APP SCREEN -->
+<div id="app-screen">
+<div class="container">
 
-            <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700 border-t-4 border-t-red-600">
-                <h2 class="text-2xl font-semibold mb-4 text-red-500">Desligamento Crítico</h2>
-                <p class="text-sm text-gray-400 mb-4">Revogue nuvens e bloqueie o notebook instantaneamente.</p>
-                <form id="form-offboarding" class="space-y-4">
-                    <div>
-                        <label class="block text-sm text-gray-400">E-mail Corporativo</label>
-                        <input type="email" id="email_off" class="w-full p-2 mt-1 bg-gray-700 border border-red-900 rounded text-white" placeholder="joao@startup.com" required>
-                    </div>
-                    <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition shadow-[0_0_15px_rgba(220,38,38,0.6)]">
-                        BLOQUEAR ACESSOS E DISPOSITIVO
-                    </button>
-                </form>
-            </div>
+<header>
+  <h1>O <span>Guardiao</span></h1>
+  <div style="display:flex;align-items:center;gap:1rem">
+    <span id="user-email" style="color:var(--muted);font-size:.85rem"></span>
+    <button class="btn-sm btn-danger" onclick="logout()">Sair</button>
+  </div>
+</header>
 
-            <div class="col-span-1 md:col-span-2 bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700 border-t-4 border-t-blue-500 mt-2">
-                <h2 class="text-2xl font-semibold mb-2 text-blue-400">Simulador de Acesso (Visão do Colaborador)</h2>
-                <p class="text-sm text-gray-400 mb-6">Teste a regra de Zero Trust. Tente logar com um PC Pessoal e veja a porta fechar.</p>
-                
-                <form id="form-login" class="space-y-4 max-w-md">
-                    <div>
-                        <label class="block text-sm text-gray-400">Seu E-mail Corporativo</label>
-                        <input type="email" id="login_email" class="w-full p-2 mt-1 bg-gray-700 border border-gray-600 rounded text-white" required>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm text-gray-400">De onde você está acessando?</label>
-                        <select id="login_cenario" class="w-full p-2 mt-1 bg-gray-700 border border-gray-600 rounded text-white cursor-pointer">
-                            <option value="empresa">💻 Notebook da Empresa (Agente Ativo injetando o serial)</option>
-                            <option value="pessoal">🏠 PC Pessoal (Sem Agente)</option>
-                        </select>
-                    </div>
+<div class="tabs">
+  <div class="tab active" data-tab="admissao">Admissao</div>
+  <div class="tab" data-tab="demissao">Demissao</div>
+  <div class="tab" data-tab="dispositivos">Dispositivos</div>
+  <div class="tab" data-tab="tickets">Tickets</div>
+</div>
 
-                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition">
-                        Acessar Sistemas (SSO)
-                    </button>
-                </form>
-            </div>
-
-        </div>
-
-        <div class="mt-8 bg-black p-4 rounded-lg border border-gray-700 font-mono text-sm h-64 overflow-y-auto" id="terminal-logs">
-            <p class="text-green-500">> Sistema iniciado. IAM, MDM e Zero Trust ativados. Aguardando comandos...</p>
-        </div>
+<!-- TAB: ADMISSAO -->
+<div id="tab-admissao" class="tab-content active">
+<div class="card">
+  <h2 style="margin-bottom:1rem;font-size:1.15rem">Provisionar Novo Colaborador</h2>
+  <form id="form-admissao">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+      <div class="form-group"><label>Nome completo</label><input type="text" id="adm-nome" required></div>
+      <div class="form-group"><label>Email corporativo</label><input type="email" id="adm-email" required></div>
     </div>
+    <div class="form-group">
+      <label>Departamento</label>
+      <select id="adm-dept">
+        <option>Engenharia</option><option>Vendas</option><option>Marketing</option><option>Financeiro</option><option>RH</option><option>TI</option><option>Operacoes</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Sistemas sem API (tickets manuais)</label>
+      <div class="check-row">
+        <label><input type="checkbox" value="TOTVS"> TOTVS</label>
+        <label><input type="checkbox" value="Sankhya"> Sankhya</label>
+        <label><input type="checkbox" value="NetSuite"> NetSuite</label>
+        <label><input type="checkbox" value="Outro"> Outro</label>
+      </div>
+    </div>
+    <button type="submit" class="btn-success" style="width:100%">Provisionar Colaborador</button>
+  </form>
+  <div id="log-admissao" class="log-area"><p class="log-info">Aguardando...</p></div>
+</div>
+</div>
 
-    <script>
-        const urlAPI = "https://guardiao-iam-mdm.onrender.com/api/v1";
+<!-- TAB: DEMISSAO -->
+<div id="tab-demissao" class="tab-content">
+<div class="card">
+  <h2 style="margin-bottom:1rem;font-size:1.15rem;color:var(--danger)">Offboarding &mdash; Revogar Acessos</h2>
+  <form id="form-demissao">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+      <div class="form-group"><label>Nome do colaborador</label><input type="text" id="dem-nome" required></div>
+      <div class="form-group"><label>Email corporativo</label><input type="email" id="dem-email" required></div>
+    </div>
+    <div class="form-group">
+      <label>Sistemas para gerar tickets de revogacao</label>
+      <div class="check-row">
+        <label><input type="checkbox" value="TOTVS"> TOTVS</label>
+        <label><input type="checkbox" value="Sankhya"> Sankhya</label>
+        <label><input type="checkbox" value="NetSuite"> NetSuite</label>
+        <label><input type="checkbox" value="Outro"> Outro</label>
+      </div>
+    </div>
+    <button type="submit" class="btn-danger" style="width:100%">Revogar Acessos &mdash; Offboarding</button>
+  </form>
+  <div id="log-demissao" class="log-area"><p class="log-info">Aguardando...</p></div>
+</div>
+</div>
 
-        function adicionarLog(mensagem, cor = "text-gray-300") {
-            const terminal = document.getElementById("terminal-logs");
-            terminal.innerHTML += `<p class="${cor}">> ${mensagem}</p>`;
-            terminal.scrollTop = terminal.scrollHeight;
-        }
+<!-- TAB: DISPOSITIVOS -->
+<div id="tab-dispositivos" class="tab-content">
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">
+    <h2 style="font-size:1.15rem">Dispositivos da Empresa</h2>
+    <span id="disp-refresh" style="font-size:.78rem;color:var(--muted)">Auto-refresh: 30s</span>
+  </div>
+  <div style="overflow-x:auto">
+  <table id="tbl-dispositivos">
+    <thead><tr><th>Hostname</th><th>Serial</th><th>SO</th><th>Status</th><th>Heartbeat</th><th>Acoes</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  </div>
+  <p id="disp-empty" style="color:var(--muted);text-align:center;padding:2rem;display:none">Nenhum dispositivo registrado</p>
+</div>
+</div>
 
-        // 1. Gatilho de Onboarding
-        document.getElementById("form-onboarding").addEventListener("submit", async function(e) {
-            e.preventDefault();
-            const dados = {
-                name: document.getElementById("nome").value,
-                email: document.getElementById("email").value,
-                department: document.getElementById("departamento").value,
-                device_serial: document.getElementById("serial").value
-            };
+<!-- TAB: TICKETS -->
+<div id="tab-tickets" class="tab-content">
+<div class="stats-row" id="ticket-stats"></div>
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">
+    <h2 style="font-size:1.15rem">Tickets de Tarefa</h2>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+      <select id="filtro-status" style="width:auto;padding:.35rem .6rem;font-size:.82rem"><option value="">Status</option><option>ABERTO</option><option>EM_ANDAMENTO</option><option>FECHADO</option></select>
+      <select id="filtro-tipo" style="width:auto;padding:.35rem .6rem;font-size:.82rem"><option value="">Tipo</option><option>ADMISSAO</option><option>DEMISSAO</option></select>
+      <select id="filtro-sistema" style="width:auto;padding:.35rem .6rem;font-size:.82rem"><option value="">Sistema</option><option>TOTVS</option><option>Sankhya</option><option>NetSuite</option><option>Outro</option></select>
+    </div>
+  </div>
+  <div style="overflow-x:auto">
+  <table id="tbl-tickets">
+    <thead><tr><th>Colaborador</th><th>Tipo</th><th>Sistema</th><th>Status</th><th>Criado</th><th>Acoes</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  </div>
+  <p id="tickets-empty" style="color:var(--muted);text-align:center;padding:2rem;display:none">Nenhum ticket encontrado</p>
+</div>
+</div>
 
-            adicionarLog(`Processando contratação para o departamento de ${dados.department}...`, "text-yellow-400");
+</div>
+</div>
 
-            try {
-                const resposta = await fetch(`${urlAPI}/onboarding`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(dados)
-                });
-                const resultado = await resposta.json();
-                
-                if (resposta.status === 500) {
-                     adicionarLog("ERRO DO BANCO: O Serial deste equipamento já está em uso!", "text-red-500 font-bold");
-                } else {
-                    adicionarLog(resultado.message, "text-green-400 font-bold");
-                    resultado.logs.forEach(log => adicionarLog(log, "text-blue-300"));
-                    this.reset();
-                }
-            } catch (erro) {
-                adicionarLog("Erro ao conectar com a API. Verifique se o Uvicorn está rodando.", "text-red-500");
-            }
-        });
+<script>
+(function(){
+let TOKEN = null;
+const API = window.location.origin;
 
-        // 2. Gatilho de Offboarding
-        document.getElementById("form-offboarding").addEventListener("submit", async function(e) {
-            e.preventDefault();
-            const emailParaCortar = document.getElementById("email_off").value;
+// --- AUTH ---
+function headers(){ return {"Content-Type":"application/json","Authorization":"Bearer "+TOKEN} }
 
-            adicionarLog(`!!! DISPARANDO REVOGAÇÃO TOTAL PARA: ${emailParaCortar} !!!`, "text-red-500 font-bold");
+async function api(method, path, body){
+  const opts = {method, headers: headers()};
+  if(body) opts.body = JSON.stringify(body);
+  const r = await fetch(API + path, opts);
+  const d = await r.json();
+  if(!r.ok) throw {status:r.status, detail:d.detail||"Erro"};
+  return d;
+}
 
-            try {
-                const resposta = await fetch(`${urlAPI}/offboarding`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ email: emailParaCortar })
-                });
-                const resultado = await resposta.json();
-                
-                if(resposta.status === 404) {
-                    adicionarLog(`ERRO: ${resultado.detail}`, "text-red-500");
-                } else {
-                    adicionarLog(resultado.message, "text-green-400 font-bold");
-                    resultado.logs.forEach(log => adicionarLog(log, "text-red-300"));
-                }
-                this.reset();
-            } catch (erro) {
-                adicionarLog("Erro ao conectar com a API.", "text-red-500");
-            }
-        });
+document.getElementById("form-login").addEventListener("submit", async(e)=>{
+  e.preventDefault();
+  const err = document.getElementById("login-error");
+  err.style.display="none";
+  try{
+    const d = await fetch(API+"/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:document.getElementById("login-email").value,senha:document.getElementById("login-senha").value})});
+    const j = await d.json();
+    if(!d.ok){err.textContent=j.detail;err.style.display="block";return}
+    TOKEN = j.access_token;
+    const payload = JSON.parse(atob(TOKEN.split(".")[1]));
+    document.getElementById("user-email").textContent = payload.sub;
+    document.getElementById("login-screen").style.display="none";
+    document.getElementById("app-screen").style.display="block";
+    loadTickets(); loadDispositivos(); loadTicketStats();
+  }catch(ex){err.textContent="Erro de conexao";err.style.display="block"}
+});
 
-        // 3. Gatilho do Login Zero Trust
-        document.getElementById("form-login").addEventListener("submit", async function(e) {
-            e.preventDefault();
-            const email = document.getElementById("login_email").value;
-            const cenario = document.getElementById("login_cenario").value;
-            
-            // Simula o agente invisível
-            let serialInjetado = "";
-            if (cenario === "empresa") {
-                // Pega o que estiver escrito na caixinha de serial lá de cima (só para testes)
-                serialInjetado = document.getElementById("serial").value || "DELL-TI"; 
-            } else {
-                serialInjetado = "PC-GAMER-DESCONHECIDO";
-            }
+window.logout = function(){ TOKEN=null; document.getElementById("app-screen").style.display="none"; document.getElementById("login-screen").style.display="flex"; };
 
-            adicionarLog(`Tentativa de Login (SSO) para: ${email}...`, "text-yellow-400");
-            adicionarLog(`Verificando certificado de hardware: [${serialInjetado}]`, "text-gray-500");
+// --- TABS ---
+document.querySelectorAll(".tab").forEach(t=>{
+  t.addEventListener("click",()=>{
+    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+    document.querySelectorAll(".tab-content").forEach(x=>x.classList.remove("active"));
+    t.classList.add("active");
+    document.getElementById("tab-"+t.dataset.tab).classList.add("active");
+    if(t.dataset.tab==="dispositivos") loadDispositivos();
+    if(t.dataset.tab==="tickets"){loadTickets();loadTicketStats();}
+  });
+});
 
-            try {
-                const resposta = await fetch(`${urlAPI}/login`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ 
-                        email: email, 
-                        password: "senha_simulada", 
-                        agent_serial: serialInjetado 
-                    })
-                });
-                const resultado = await resposta.json();
-                
-                if (resultado.status === "bloqueado") {
-                    adicionarLog(resultado.message, "text-red-500 font-bold");
-                    adicionarLog(resultado.detalhe, "text-red-400");
-                } else if (resultado.status === "permitido") {
-                    adicionarLog(resultado.message, "text-green-500 font-bold");
-                    adicionarLog(resultado.detalhe, "text-green-400");
-                } else {
-                    adicionarLog(`ERRO: ${resultado.detail}`, "text-red-500");
-                }
-            } catch (erro) {
-                adicionarLog("Erro de conexão com o motor Acesso Condicional.", "text-red-500");
-            }
-        });
-    </script>
+// --- LOG HELPER ---
+function addLog(id,msg,cls){
+  const el=document.getElementById(id);
+  el.innerHTML+='<p class="'+cls+'">'+msg+'</p>';
+  el.scrollTop=el.scrollHeight;
+}
+
+// --- ADMISSAO ---
+document.getElementById("form-admissao").addEventListener("submit", async(e)=>{
+  e.preventDefault();
+  const nome = document.getElementById("adm-nome").value;
+  const email = document.getElementById("adm-email").value;
+  const dept = document.getElementById("adm-dept").value;
+  const sistemas = [...document.querySelectorAll('#tab-admissao .check-row input:checked')].map(c=>c.value);
+  const log = "log-admissao";
+  document.getElementById(log).innerHTML="";
+
+  addLog(log, "Iniciando onboarding de "+nome+"...", "log-warn");
+  try{
+    const ob = await api("POST","/api/v1/onboarding",{email,departamento:dept});
+    ob.logs.forEach(l=>addLog(log, l, "log-ok"));
+  }catch(ex){ addLog(log, "Erro onboarding: "+ex.detail, "log-err") }
+
+  if(sistemas.length > 0){
+    addLog(log, "Gerando tickets para: "+sistemas.join(", ")+"...", "log-info");
+    try{
+      const tk = await api("POST","/api/v1/tickets/gerar",{colaborador_nome:nome,colaborador_email:email,tipo:"ADMISSAO",departamento:dept,sistemas});
+      tk.tickets.forEach(t=>addLog(log, "Ticket "+t.sistema+" aberto (ID: "+t.id.slice(0,8)+"...)", "log-ok"));
+    }catch(ex){ addLog(log, "Erro tickets: "+ex.detail, "log-err") }
+  }
+  addLog(log, "Onboarding concluido!", "log-ok");
+});
+
+// --- DEMISSAO ---
+document.getElementById("form-demissao").addEventListener("submit", async(e)=>{
+  e.preventDefault();
+  if(!confirm("Confirma o offboarding? Todos os acessos serao revogados.")) return;
+  const nome = document.getElementById("dem-nome").value;
+  const email = document.getElementById("dem-email").value;
+  const sistemas = [...document.querySelectorAll('#tab-demissao .check-row input:checked')].map(c=>c.value);
+  const log = "log-demissao";
+  document.getElementById(log).innerHTML="";
+
+  addLog(log, "OFFBOARDING: Revogando acessos de "+nome+"...", "log-err");
+
+  try{
+    const disps = await api("GET","/api/v1/agente/dispositivos");
+    for(const d of disps){
+      if(d.status !== "BLOQUEADO"){
+        try{
+          await api("POST","/api/v1/agente/lock/"+d.serial_placa_mae);
+          addLog(log, "Dispositivo "+d.hostname+" BLOQUEADO", "log-err");
+        }catch(ex){}
+      }
+    }
+  }catch(ex){ addLog(log, "Aviso: nao foi possivel listar dispositivos", "log-warn") }
+
+  if(sistemas.length > 0){
+    addLog(log, "Gerando tickets de revogacao...", "log-info");
+    try{
+      const tk = await api("POST","/api/v1/tickets/gerar",{colaborador_nome:nome,colaborador_email:email,tipo:"DEMISSAO",departamento:"",sistemas});
+      tk.tickets.forEach(t=>addLog(log, "Ticket DEMISSAO "+t.sistema+" aberto", "log-ok"));
+    }catch(ex){ addLog(log, "Erro tickets: "+ex.detail, "log-err") }
+  }
+  addLog(log, "Offboarding concluido. Acessos revogados.", "log-ok");
+});
+
+// --- DISPOSITIVOS ---
+async function loadDispositivos(){
+  if(!TOKEN) return;
+  try{
+    const data = await api("GET","/api/v1/agente/dispositivos");
+    const tbody = document.querySelector("#tbl-dispositivos tbody");
+    const empty = document.getElementById("disp-empty");
+    if(!data.length){tbody.innerHTML="";empty.style.display="block";return}
+    empty.style.display="none";
+    tbody.innerHTML = data.map(d=>{
+      let badge="badge-gray", label=d.status;
+      if(d.status==="ATIVO"&&d.online){badge="badge-green"}
+      else if(d.status==="BLOQUEADO"){badge="badge-red"}
+      else if(d.status==="ATIVO"&&!d.online){badge="badge-yellow";label="INATIVO"}
+      else if(d.status==="PENDENTE"){badge="badge-gray"}
+      const hb = d.ultimo_heartbeat ? new Date(d.ultimo_heartbeat).toLocaleString("pt-BR") : "Nunca";
+      const lockBtn = d.status==="BLOQUEADO"
+        ? '<button class="btn-sm btn-success" onclick="unlockDevice(\''+d.serial_placa_mae+'\')">Desbloquear</button>'
+        : '<button class="btn-sm btn-danger" onclick="lockDevice(\''+d.serial_placa_mae+'\')">Bloquear</button>';
+      return '<tr><td>'+d.hostname+'</td><td style="font-size:.8rem;color:var(--muted)">'+d.serial_placa_mae+'</td><td>'+(d.sistema_operacional||"-")+'</td><td><span class="badge '+badge+'">'+label+'</span></td><td style="font-size:.82rem">'+hb+'</td><td>'+lockBtn+'</td></tr>';
+    }).join("");
+  }catch(ex){}
+}
+
+window.lockDevice = async function(serial){
+  if(!confirm("Bloquear dispositivo "+serial+"?")) return;
+  try{await api("POST","/api/v1/agente/lock/"+serial);loadDispositivos()}catch(ex){alert("Erro: "+ex.detail)}
+};
+window.unlockDevice = async function(serial){
+  if(!confirm("Desbloquear dispositivo "+serial+"?")) return;
+  try{await api("POST","/api/v1/agente/unlock/"+serial);loadDispositivos()}catch(ex){alert("Erro: "+ex.detail)}
+};
+
+setInterval(()=>{
+  if(TOKEN && document.getElementById("tab-dispositivos").classList.contains("active")) loadDispositivos();
+},30000);
+
+// --- TICKETS ---
+async function loadTicketStats(){
+  if(!TOKEN) return;
+  try{
+    const s = await api("GET","/api/v1/tickets/stats");
+    document.getElementById("ticket-stats").innerHTML=
+      '<div class="stat-card"><div class="num">'+s.total+'</div><div class="lbl">Total</div></div>'+
+      '<div class="stat-card"><div class="num" style="color:#2ecc71">'+s.abertos+'</div><div class="lbl">Abertos</div></div>'+
+      '<div class="stat-card"><div class="num" style="color:#f39c12">'+s.em_andamento+'</div><div class="lbl">Em Andamento</div></div>'+
+      '<div class="stat-card"><div class="num" style="color:var(--muted)">'+s.fechados+'</div><div class="lbl">Fechados</div></div>';
+  }catch(ex){}
+}
+
+async function loadTickets(){
+  if(!TOKEN) return;
+  const params = new URLSearchParams();
+  const s=document.getElementById("filtro-status").value; if(s) params.set("status",s);
+  const t=document.getElementById("filtro-tipo").value; if(t) params.set("tipo",t);
+  const si=document.getElementById("filtro-sistema").value; if(si) params.set("sistema",si);
+  try{
+    const data = await api("GET","/api/v1/tickets?"+params.toString());
+    const tbody = document.querySelector("#tbl-tickets tbody");
+    const empty = document.getElementById("tickets-empty");
+    if(!data.length){tbody.innerHTML="";empty.style.display="block";return}
+    empty.style.display="none";
+    tbody.innerHTML = data.map(tk=>{
+      let badge="badge-green",label=tk.status;
+      if(tk.status==="FECHADO"){badge="badge-gray"}else if(tk.status==="EM_ANDAMENTO"){badge="badge-yellow"}
+      const criado = tk.criado_em ? new Date(tk.criado_em).toLocaleString("pt-BR") : "-";
+      const tipoBadge = tk.tipo==="DEMISSAO"?"badge-red":"badge-green";
+      const acao = tk.status!=="FECHADO"?'<button class="btn-sm btn-primary" onclick="fecharTicket(\''+tk.id+'\')">Fechar</button>':'<span style="color:var(--muted);font-size:.8rem">Fechado</span>';
+      return '<tr><td>'+tk.colaborador_nome+'<br><span style="font-size:.78rem;color:var(--muted)">'+tk.colaborador_email+'</span></td><td><span class="badge '+tipoBadge+'">'+tk.tipo+'</span></td><td>'+tk.sistema+'</td><td><span class="badge '+badge+'">'+label+'</span></td><td style="font-size:.82rem">'+criado+'</td><td>'+acao+'</td></tr>';
+    }).join("");
+  }catch(ex){}
+}
+
+window.fecharTicket = async function(id){
+  if(!confirm("Fechar este ticket?")) return;
+  try{await api("PATCH","/api/v1/tickets/"+id+"/fechar");loadTickets();loadTicketStats()}catch(ex){alert("Erro: "+ex.detail)}
+};
+
+document.getElementById("filtro-status").addEventListener("change",loadTickets);
+document.getElementById("filtro-tipo").addEventListener("change",loadTickets);
+document.getElementById("filtro-sistema").addEventListener("change",loadTickets);
+
+})();
+</script>
 </body>
 </html>

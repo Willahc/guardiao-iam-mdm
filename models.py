@@ -102,6 +102,30 @@ class TicketTarefa(Base):
     fechado_por = Column(String, nullable=True)
 
 
+class RegistroAuditoria(Base):
+    __tablename__ = "registros_auditoria"
+
+    id = Column(Integer, primary_key=True, index=True)
+    empresa_id = Column(Integer, ForeignKey("empresas.id"), nullable=False)
+    acao = Column(String, nullable=False)
+    executado_por = Column(String, nullable=False)
+    colaborador_email = Column(String, nullable=True)
+    detalhes = Column(JSON, nullable=True)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class PlanoEmpresa(Base):
+    __tablename__ = "planos_empresa"
+
+    id = Column(Integer, primary_key=True, index=True)
+    empresa_id = Column(Integer, ForeignKey("empresas.id"), nullable=False, unique=True)
+    plano = Column(String, default="STARTER")
+    usuarios_ativos = Column(Integer, default=0)
+    valor_por_usuario = Column(Integer, default=2900)
+    proximo_vencimento = Column(DateTime(timezone=True), nullable=True)
+    status = Column(String, default="ATIVO")
+
+
 class AuditLog(Base):
     __tablename__ = "audit_logs"
 
