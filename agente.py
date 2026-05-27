@@ -1,9 +1,11 @@
 import logging
 import os
 import platform
+import socket
 import subprocess
 import sys
 import time
+import uuid
 
 import requests
 from dotenv import load_dotenv
@@ -14,7 +16,8 @@ load_dotenv()
 AGENT_TOKEN = os.getenv("AGENT_TOKEN", "")
 SERVER_URL = os.getenv("SERVER_URL", "http://127.0.0.1:8000")
 HEARTBEAT_INTERVAL = int(os.getenv("HEARTBEAT_INTERVAL", "300"))
-VERSION = "1.0.0"
+SERIAL_OVERRIDE = os.getenv("SERIAL_OVERRIDE", "")
+VERSION = "1.1.0"
 
 logging.basicConfig(
     filename="agente.log",
@@ -25,23 +28,40 @@ logger = logging.getLogger("guardiao-agente")
 logger.addHandler(logging.StreamHandler(sys.stdout))
 
 
+def _fallback_serial() -> str:
+    return f"{socket.gethostname()}-{uuid.getnode():012x}"
+
+
 def obter_serial_placa_mae() -> str:
+    if SERIAL_OVERRIDE:
+        logger.info("Usando SERIAL_OVERRIDE: %s", SERIAL_OVERRIDE)
+        return SERIAL_OVERRIDE
+
     sistema = platform.system()
     try:
         if sistema == "Windows":
-            result = subprocess.run(
-                ["wmic", "baseboard", "get", "serialnumber"],
-                capture_output=True, text=True, timeout=10,
-            )
-            lines = [l.strip() for l in result.stdout.strip().splitlines() if l.strip()]
-            return lines[-1] if len(lines) > 1 else "DESCONHECIDO"
+            for cmd in [
+                ["powershell", "-Command", "(Get-WmiObject Win32_ComputerSystemProduct).UUID"],
+                ["powershell", "-Command", "(Get-CimInstance Win32_BaseBoard).SerialNumber"],
+            ]:
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+                serial = result.stdout.strip()
+                if serial and serial not in ("", "None", "To Be Filled By O.E.M."):
+                    return serial
+            return _fallback_serial()
         elif sistema == "Linux":
-            result = subprocess.run(
-                ["cat", "/sys/class/dmi/id/board_serial"],
-                capture_output=True, text=True, timeout=10,
-            )
-            serial = result.stdout.strip()
-            return serial if serial else "DESCONHECIDO"
+            for path in ["/sys/class/dmi/id/board_serial", "/sys/class/dmi/id/product_uuid"]:
+                try:
+                    result = subprocess.run(
+                        ["cat", path],
+                        capture_output=True, text=True, timeout=10,
+                    )
+                    serial = result.stdout.strip()
+                    if serial and serial not in ("", "None"):
+                        return serial
+                except Exception:
+                    continue
+            return _fallback_serial()
         elif sistema == "Darwin":
             result = subprocess.run(
                 ["ioreg", "-l"],
@@ -50,9 +70,10 @@ def obter_serial_placa_mae() -> str:
             for line in result.stdout.splitlines():
                 if "IOPlatformSerialNumber" in line:
                     return line.split('"')[-2]
+            return _fallback_serial()
     except Exception as e:
         logger.warning("Falha ao obter serial: %s", e)
-    return "DESCONHECIDO"
+    return _fallback_serial()
 
 
 def travar_estacao():
