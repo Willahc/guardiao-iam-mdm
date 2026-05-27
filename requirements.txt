@@ -2,3 +2,7 @@ fastapi
 uvicorn[standard]
 sqlalchemy
 pydantic
+python-jose[cryptography]
+bcrypt
+python-dotenv
+alembic
