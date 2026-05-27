@@ -6,19 +6,31 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-JIRA_EMAIL = os.getenv("JIRA_EMAIL")
-JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN")
-JIRA_DOMAIN = os.getenv("JIRA_DOMAIN", "guardiao-iam.atlassian.net")
-JIRA_PROJECT_KEY = os.getenv("JIRA_PROJECT_KEY", "KAN")
 JIRA_TIMEOUT = 10
 
 
+def _email():
+    return os.getenv("JIRA_EMAIL")
+
+
+def _api_token():
+    return os.getenv("JIRA_API_TOKEN")
+
+
+def _domain():
+    return os.getenv("JIRA_DOMAIN", "guardiao-iam.atlassian.net")
+
+
+def _project_key():
+    return os.getenv("JIRA_PROJECT_KEY", "KAN")
+
+
 def _configurado() -> bool:
-    return bool(JIRA_EMAIL and JIRA_API_TOKEN and JIRA_DOMAIN)
+    return bool(_email() and _api_token() and _domain())
 
 
 def _headers():
-    cred = base64.b64encode(f"{JIRA_EMAIL}:{JIRA_API_TOKEN}".encode()).decode()
+    cred = base64.b64encode(f"{_email()}:{_api_token()}".encode()).decode()
     return {
         "Authorization": f"Basic {cred}",
         "Content-Type": "application/json",
@@ -27,7 +39,7 @@ def _headers():
 
 
 def _base_url():
-    return f"https://{JIRA_DOMAIN}"
+    return f"https://{_domain()}"
 
 
 def criar_issue(summary: str, description: str, tipo: str = "Task") -> dict:
@@ -37,7 +49,7 @@ def criar_issue(summary: str, description: str, tipo: str = "Task") -> dict:
     try:
         payload = {
             "fields": {
-                "project": {"key": JIRA_PROJECT_KEY},
+                "project": {"key": _project_key()},
                 "summary": summary,
                 "description": {
                     "type": "doc",

@@ -5,16 +5,19 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")
 SLACK_TIMEOUT = 10
 
 
+def _token():
+    return os.getenv("SLACK_BOT_TOKEN")
+
+
 def _headers():
-    return {"Authorization": f"Bearer {SLACK_BOT_TOKEN}", "Content-Type": "application/json"}
+    return {"Authorization": f"Bearer {_token()}", "Content-Type": "application/json"}
 
 
 def buscar_usuario_por_email(email: str) -> dict | None:
-    if not SLACK_BOT_TOKEN:
+    if not _token():
         logger.warning("SLACK_BOT_TOKEN não configurado — ignorando busca de usuário")
         return None
     try:
@@ -35,7 +38,7 @@ def buscar_usuario_por_email(email: str) -> dict | None:
 
 
 def enviar_mensagem_boas_vindas(email: str, nome: str, departamento: str) -> bool:
-    if not SLACK_BOT_TOKEN:
+    if not _token():
         logger.warning("SLACK_BOT_TOKEN não configurado — ignorando boas-vindas")
         return False
     user = buscar_usuario_por_email(email)
@@ -62,7 +65,7 @@ def enviar_mensagem_boas_vindas(email: str, nome: str, departamento: str) -> boo
 
 
 def notificar_offboarding(email: str, nome: str) -> bool:
-    if not SLACK_BOT_TOKEN:
+    if not _token():
         logger.warning("SLACK_BOT_TOKEN não configurado — ignorando notificação offboarding")
         return False
     user = buscar_usuario_por_email(email)
