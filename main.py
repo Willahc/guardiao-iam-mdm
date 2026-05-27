@@ -36,7 +36,7 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="O Guardião - Enterprise IAM & MDM",
-    version="2.5",
+    version="2.6",
     description="Motor central de governança de acessos e blindagem de hardware. Integrações: Slack, GitHub, Jira.",
 )
 
