@@ -50,6 +50,18 @@ def _is_org() -> bool:
     return False
 
 
+def _has_repo_scope() -> bool:
+    try:
+        resp = requests.get(
+            f"https://api.github.com/repos/{_owner()}/{_repo()}/collaborators",
+            headers=_headers(),
+            timeout=GITHUB_TIMEOUT,
+        )
+        return resp.status_code == 200
+    except requests.RequestException:
+        return False
+
+
 def adicionar_membro_org(username: str) -> dict:
     if not _token():
         logger.warning("GITHUB_TOKEN não configurado — ignorando adição de membro")
@@ -76,6 +88,13 @@ def adicionar_membro_org(username: str) -> dict:
                 return {"sucesso": True, "mensagem": f"Convite de collaborator enviado para {username} no repo {_repo()}"}
             if resp.status_code == 204:
                 return {"sucesso": True, "mensagem": f"{username} já é collaborator do repo {_repo()}"}
+            if resp.status_code in (403, 404):
+                return {
+                    "sucesso": False,
+                    "mensagem": f"Token sem escopo 'repo'. Adicione o escopo em github.com/settings/tokens",
+                    "modo": "user",
+                    "owner": _owner(),
+                }
 
         logger.warning("GitHub add member falhou: %s %s", resp.status_code, resp.text)
         msg = resp.json().get("message", resp.text) if resp.text else resp.text
@@ -105,6 +124,8 @@ def remover_membro_org(username: str) -> dict:
 
         if resp.status_code == 204:
             return {"sucesso": True, "mensagem": f"{username} removido com sucesso"}
+        if resp.status_code in (403, 404) and not _is_org():
+            return {"sucesso": False, "mensagem": "Token sem escopo 'repo'. Adicione o escopo em github.com/settings/tokens"}
         logger.warning("GitHub remove member falhou: %s %s", resp.status_code, resp.text)
         msg = resp.json().get("message", resp.text) if resp.text else resp.text
         return {"sucesso": False, "mensagem": f"Erro {resp.status_code}: {msg}"}
@@ -129,8 +150,65 @@ def listar_membros_org() -> list:
                 {"login": m["login"], "avatar_url": m["avatar_url"], "html_url": m["html_url"]}
                 for m in resp.json()
             ]
+
+        if resp.status_code in (403, 404) and not _is_org():
+            logger.warning("Token sem escopo 'repo' — tentando fallback via repos públicos")
+            return _listar_via_repos_publicos()
+
         logger.warning("GitHub list members falhou: %s %s", resp.status_code, resp.text)
         return []
     except requests.RequestException as exc:
         logger.error("Erro ao listar membros GitHub: %s", exc)
+        return []
+
+
+def _listar_via_repos_publicos() -> list:
+    try:
+        resp = requests.get(
+            f"https://api.github.com/users/{_owner()}/repos?type=owner&sort=updated&per_page=100",
+            headers=_headers(),
+            timeout=GITHUB_TIMEOUT,
+        )
+        if resp.status_code != 200:
+            return []
+
+        repos = resp.json()
+        membros_vistos = set()
+        resultado = []
+
+        resultado.append({
+            "login": _owner(),
+            "avatar_url": f"https://github.com/{_owner()}.png",
+            "html_url": f"https://github.com/{_owner()}",
+            "role": "owner",
+        })
+        membros_vistos.add(_owner().lower())
+
+        for repo in repos[:10]:
+            if repo.get("fork"):
+                continue
+            repo_name = repo["name"]
+            try:
+                r = requests.get(
+                    f"https://api.github.com/repos/{_owner()}/{repo_name}/contributors",
+                    headers=_headers(),
+                    timeout=GITHUB_TIMEOUT,
+                )
+                if r.status_code == 200:
+                    for c in r.json():
+                        login = c.get("login", "")
+                        if login.lower() not in membros_vistos and not login.endswith("[bot]"):
+                            resultado.append({
+                                "login": login,
+                                "avatar_url": c.get("avatar_url", ""),
+                                "html_url": c.get("html_url", ""),
+                                "role": "contributor",
+                            })
+                            membros_vistos.add(login.lower())
+            except requests.RequestException:
+                continue
+
+        return resultado
+    except requests.RequestException as exc:
+        logger.error("Erro no fallback repos públicos: %s", exc)
         return []
