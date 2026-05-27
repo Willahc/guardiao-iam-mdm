@@ -16,6 +16,7 @@ load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-troque-em-producao")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+AGENT_JWT_SECRET = os.getenv("AGENT_JWT_SECRET", SECRET_KEY)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
@@ -33,6 +34,28 @@ def criar_access_token(data: dict, expires_delta: timedelta | None = None) -> st
     expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def criar_agent_token(serial: str, empresa_id: int) -> str:
+    expire = datetime.now(timezone.utc) + timedelta(days=365)
+    return jwt.encode(
+        {"serial": serial, "empresa_id": empresa_id, "tipo": "agente", "exp": expire},
+        AGENT_JWT_SECRET,
+        algorithm=ALGORITHM,
+    )
+
+
+def validar_agent_token(token: str) -> dict:
+    try:
+        payload = jwt.decode(token, AGENT_JWT_SECRET, algorithms=[ALGORITHM])
+        if payload.get("tipo") != "agente":
+            raise ValueError
+        return payload
+    except (JWTError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token de agente inválido ou expirado",
+        )
 
 
 def get_usuario_atual(
@@ -55,4 +78,10 @@ def get_usuario_atual(
     usuario = db.query(models.Usuario).filter(models.Usuario.email == email).first()
     if usuario is None or not usuario.ativo:
         raise credentials_exception
+    return usuario
+
+
+def require_admin(usuario: models.Usuario = Depends(get_usuario_atual)) -> models.Usuario:
+    if usuario.role != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acesso restrito a administradores")
     return usuario

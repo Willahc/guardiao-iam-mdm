@@ -71,6 +71,21 @@ class User(Base):
     status = Column(String, default="active")
 
 
+class Dispositivo(Base):
+    __tablename__ = "dispositivos"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    empresa_id = Column(Integer, ForeignKey("empresas.id"), nullable=False)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    serial_placa_mae = Column(String, nullable=False, index=True)
+    hostname = Column(String, nullable=False)
+    sistema_operacional = Column(String, nullable=True)
+    versao_agente = Column(String, nullable=True)
+    status = Column(String, default="PENDENTE")
+    ultimo_heartbeat = Column(DateTime(timezone=True), nullable=True)
+    registrado_em = Column(DateTime(timezone=True), server_default=func.now())
+
+
 class TicketTarefa(Base):
     __tablename__ = "tickets_tarefa"
 

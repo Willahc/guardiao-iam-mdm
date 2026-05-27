@@ -14,7 +14,10 @@ from auth import (
     hash_senha,
     verificar_senha,
     criar_access_token,
+    criar_agent_token,
+    validar_agent_token,
     get_usuario_atual,
+    require_admin,
     ACCESS_TOKEN_EXPIRE_MINUTES,
     SECRET_KEY,
     ALGORITHM,
@@ -56,6 +59,7 @@ class PayloadRH(BaseModel):
 class LoginRequest(BaseModel):
     email: str
     senha: str
+    serial_placa_mae: Optional[str] = None
 
 
 class RegistroEmpresa(BaseModel):
@@ -72,6 +76,19 @@ class GerarTicketsRequest(BaseModel):
     tipo: str
     departamento: str
     sistemas: list[str]
+
+
+class RegistrarDispositivoRequest(BaseModel):
+    serial_placa_mae: str
+    hostname: str
+    sistema_operacional: Optional[str] = None
+    usuario_email: Optional[str] = None
+
+
+class AgentePingRequest(BaseModel):
+    serial_placa_mae: str
+    versao_agente: Optional[str] = None
+    hostname: Optional[str] = None
 
 
 # ==========================================
@@ -92,6 +109,27 @@ def login(dados: LoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Email ou senha incorretos")
     if not usuario.ativo:
         raise HTTPException(status_code=403, detail="Usuário desativado")
+
+    if dados.serial_placa_mae:
+        dispositivo = db.query(models.Dispositivo).filter(
+            models.Dispositivo.serial_placa_mae == dados.serial_placa_mae,
+            models.Dispositivo.empresa_id == usuario.empresa_id,
+        ).first()
+        heartbeat_limite = datetime.now(timezone.utc) - timedelta(minutes=10)
+        hb = dispositivo.ultimo_heartbeat if dispositivo else None
+        if hb and hb.tzinfo is None:
+            hb = hb.replace(tzinfo=timezone.utc)
+        if (
+            not dispositivo
+            or dispositivo.status != "ATIVO"
+            or not hb
+            or hb < heartbeat_limite
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="Acesso negado: dispositivo não gerenciado ou fora de conformidade.",
+            )
+
     access_token = criar_access_token(
         data={"sub": usuario.email, "empresa_id": usuario.empresa_id, "role": usuario.role},
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
@@ -335,3 +373,177 @@ def stats_tickets(
         "em_andamento": em_andamento,
         "fechados": fechados,
     }
+
+
+# ==========================================
+# ROTAS: AGENTE MDM
+# ==========================================
+@app.post("/api/v1/agente/registrar", tags=["Agente MDM"])
+def registrar_dispositivo(
+    dados: RegistrarDispositivoRequest,
+    db: Session = Depends(get_db),
+    admin: models.Usuario = Depends(require_admin),
+):
+    existente = db.query(models.Dispositivo).filter(
+        models.Dispositivo.serial_placa_mae == dados.serial_placa_mae,
+        models.Dispositivo.empresa_id == admin.empresa_id,
+    ).first()
+    if existente:
+        raise HTTPException(status_code=409, detail="Dispositivo já registrado nesta empresa")
+
+    usuario_id = None
+    if dados.usuario_email:
+        usuario = db.query(models.Usuario).filter(
+            models.Usuario.email == dados.usuario_email,
+            models.Usuario.empresa_id == admin.empresa_id,
+        ).first()
+        if not usuario:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado nesta empresa")
+        usuario_id = usuario.id
+
+    dispositivo = models.Dispositivo(
+        empresa_id=admin.empresa_id,
+        usuario_id=usuario_id,
+        serial_placa_mae=dados.serial_placa_mae,
+        hostname=dados.hostname,
+        sistema_operacional=dados.sistema_operacional,
+    )
+    db.add(dispositivo)
+    db.commit()
+    db.refresh(dispositivo)
+
+    agent_token = criar_agent_token(dados.serial_placa_mae, admin.empresa_id)
+
+    return {
+        "status": "sucesso",
+        "dispositivo": {
+            "id": dispositivo.id,
+            "serial_placa_mae": dispositivo.serial_placa_mae,
+            "hostname": dispositivo.hostname,
+            "status": dispositivo.status,
+            "registrado_em": dispositivo.registrado_em.isoformat() if dispositivo.registrado_em else None,
+        },
+        "agent_token": agent_token,
+    }
+
+
+@app.post("/api/v1/agente/ping", tags=["Agente MDM"])
+def agente_ping(
+    dados: AgentePingRequest,
+    x_agent_token: str = Header(...),
+    db: Session = Depends(get_db),
+):
+    payload = validar_agent_token(x_agent_token)
+
+    dispositivo = db.query(models.Dispositivo).filter(
+        models.Dispositivo.serial_placa_mae == dados.serial_placa_mae,
+        models.Dispositivo.empresa_id == payload["empresa_id"],
+    ).first()
+    if not dispositivo:
+        raise HTTPException(status_code=404, detail="Dispositivo não encontrado")
+
+    if dispositivo.status == "BLOQUEADO":
+        dispositivo.ultimo_heartbeat = datetime.now(timezone.utc)
+        if dados.versao_agente:
+            dispositivo.versao_agente = dados.versao_agente
+        if dados.hostname:
+            dispositivo.hostname = dados.hostname
+        db.commit()
+        return {"status": "ok", "comando": "LOCK"}
+
+    dispositivo.ultimo_heartbeat = datetime.now(timezone.utc)
+    dispositivo.status = "ATIVO"
+    if dados.versao_agente:
+        dispositivo.versao_agente = dados.versao_agente
+    if dados.hostname:
+        dispositivo.hostname = dados.hostname
+    db.commit()
+
+    return {"status": "ok", "comando": None}
+
+
+@app.post("/api/v1/agente/lock/{serial}", tags=["Agente MDM"])
+def bloquear_dispositivo(
+    serial: str,
+    db: Session = Depends(get_db),
+    admin: models.Usuario = Depends(require_admin),
+):
+    dispositivo = db.query(models.Dispositivo).filter(
+        models.Dispositivo.serial_placa_mae == serial,
+        models.Dispositivo.empresa_id == admin.empresa_id,
+    ).first()
+    if not dispositivo:
+        raise HTTPException(status_code=404, detail="Dispositivo não encontrado")
+
+    dispositivo.status = "BLOQUEADO"
+    db.commit()
+    db.refresh(dispositivo)
+
+    return {
+        "status": "sucesso",
+        "dispositivo": {
+            "serial_placa_mae": dispositivo.serial_placa_mae,
+            "hostname": dispositivo.hostname,
+            "status": dispositivo.status,
+        },
+        "mensagem": "Dispositivo bloqueado. Próximo heartbeat receberá comando LOCK.",
+    }
+
+
+@app.post("/api/v1/agente/unlock/{serial}", tags=["Agente MDM"])
+def desbloquear_dispositivo(
+    serial: str,
+    db: Session = Depends(get_db),
+    admin: models.Usuario = Depends(require_admin),
+):
+    dispositivo = db.query(models.Dispositivo).filter(
+        models.Dispositivo.serial_placa_mae == serial,
+        models.Dispositivo.empresa_id == admin.empresa_id,
+    ).first()
+    if not dispositivo:
+        raise HTTPException(status_code=404, detail="Dispositivo não encontrado")
+
+    dispositivo.status = "ATIVO"
+    db.commit()
+    db.refresh(dispositivo)
+
+    return {
+        "status": "sucesso",
+        "dispositivo": {
+            "serial_placa_mae": dispositivo.serial_placa_mae,
+            "hostname": dispositivo.hostname,
+            "status": dispositivo.status,
+        },
+    }
+
+
+@app.get("/api/v1/agente/dispositivos", tags=["Agente MDM"])
+def listar_dispositivos(
+    db: Session = Depends(get_db),
+    usuario_atual: models.Usuario = Depends(get_usuario_atual),
+):
+    dispositivos = db.query(models.Dispositivo).filter(
+        models.Dispositivo.empresa_id == usuario_atual.empresa_id
+    ).all()
+
+    agora = datetime.now(timezone.utc)
+    resultado = []
+    for d in dispositivos:
+        hb = d.ultimo_heartbeat
+        if hb and hb.tzinfo is None:
+            hb = hb.replace(tzinfo=timezone.utc)
+        online = hb is not None and (agora - hb).total_seconds() < 600
+        resultado.append({
+            "id": d.id,
+            "serial_placa_mae": d.serial_placa_mae,
+            "hostname": d.hostname,
+            "sistema_operacional": d.sistema_operacional,
+            "versao_agente": d.versao_agente,
+            "status": d.status,
+            "online": online,
+            "ultimo_heartbeat": d.ultimo_heartbeat.isoformat() if d.ultimo_heartbeat else None,
+            "registrado_em": d.registrado_em.isoformat() if d.registrado_em else None,
+            "usuario_id": d.usuario_id,
+        })
+
+    return resultado
