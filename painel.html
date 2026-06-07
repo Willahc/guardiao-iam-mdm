@@ -3,73 +3,215 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>O Guardiao - Painel RH</title>
+<title>O Guardião · Painel</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#1a1a2e;--card:#16213e;--primary:#0f3460;--danger:#e94560;--success:#27ae60;--warn:#f39c12;--text:#e0e0e0;--muted:#8892a4}
-body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-input,select,button,textarea{font-family:inherit;font-size:.95rem}
-input,select{background:#0d1b36;border:1px solid #2a3a5c;color:var(--text);padding:.6rem .8rem;border-radius:6px;width:100%}
-input:focus,select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 2px rgba(15,52,96,.4)}
-button{cursor:pointer;border:none;padding:.65rem 1.2rem;border-radius:6px;font-weight:600;transition:opacity .15s}
-button:hover{opacity:.88}
-.btn-primary{background:var(--primary);color:#fff}
+:root{
+  --bg:#0d1117;--bg-elev:#161b22;--card:#1c2230;--card-hover:#222a3a;
+  --border:#2a3340;--border-strong:#3a4558;
+  --text:#e6edf3;--text-muted:#7d8590;--text-dim:#4f5867;
+  --accent:#4f8cff;--accent-dim:#4f8cff22;--accent-hover:#3a78ff;
+  --success:#3fb950;--success-dim:#3fb95022;
+  --danger:#f85149;--danger-dim:#f8514922;
+  --warn:#d29922;--warn-dim:#d2992222;
+  --shadow:0 4px 12px rgba(0,0,0,.35);--shadow-lg:0 10px 30px rgba(0,0,0,.5);
+  --radius:8px;--radius-lg:12px;
+  --transition:all .15s ease;
+}
+html,body{height:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Inter,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+input,select,button,textarea{font-family:inherit;font-size:14px;color:var(--text)}
+input,select{background:var(--bg-elev);border:1px solid var(--border);padding:.6rem .85rem;border-radius:var(--radius);width:100%;transition:var(--transition)}
+input::placeholder{color:var(--text-dim)}
+input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+input:disabled{opacity:.55;cursor:not-allowed}
+label{display:block;font-size:.82rem;color:var(--text-muted);margin-bottom:.4rem;font-weight:500}
+
+button{cursor:pointer;border:none;padding:.65rem 1.1rem;border-radius:var(--radius);font-weight:600;font-size:.9rem;display:inline-flex;align-items:center;justify-content:center;gap:.5rem;transition:var(--transition);position:relative}
+button:hover:not(:disabled){transform:translateY(-1px)}
+button:active:not(:disabled){transform:translateY(0)}
+button:disabled{cursor:not-allowed;opacity:.65}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover:not(:disabled){background:var(--accent-hover)}
 .btn-danger{background:var(--danger);color:#fff}
+.btn-danger:hover:not(:disabled){background:#e63d34}
 .btn-success{background:var(--success);color:#fff}
-.btn-sm{padding:.4rem .8rem;font-size:.82rem}
-.card{background:var(--card);border-radius:10px;padding:1.5rem;margin-bottom:1rem}
-.badge{display:inline-block;padding:.2rem .6rem;border-radius:20px;font-size:.75rem;font-weight:700;text-transform:uppercase}
-.badge-green{background:#27ae6033;color:#2ecc71}
-.badge-yellow{background:#f39c1233;color:#f1c40f}
-.badge-red{background:#e9456033;color:#e94560}
-.badge-gray{background:#8892a433;color:#8892a4}
+.btn-success:hover:not(:disabled){background:#36a345}
+.btn-ghost{background:transparent;color:var(--text-muted);border:1px solid var(--border)}
+.btn-ghost:hover:not(:disabled){background:var(--card);color:var(--text);border-color:var(--border-strong)}
+.btn-sm{padding:.42rem .8rem;font-size:.8rem}
+.btn-full{width:100%}
+.btn .spin{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.4rem;margin-bottom:1rem;box-shadow:var(--shadow)}
+.card-title{font-size:1.1rem;font-weight:600;margin-bottom:.25rem;display:flex;align-items:center;gap:.5rem}
+.card-subtitle{font-size:.85rem;color:var(--text-muted);margin-bottom:1.1rem}
+
+.badge{display:inline-flex;align-items:center;gap:.3rem;padding:.22rem .6rem;border-radius:99px;font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.badge-dot{width:6px;height:6px;border-radius:50%;display:inline-block}
+.badge-green{background:var(--success-dim);color:var(--success)}
+.badge-green .badge-dot{background:var(--success)}
+.badge-yellow{background:var(--warn-dim);color:var(--warn)}
+.badge-yellow .badge-dot{background:var(--warn)}
+.badge-red{background:var(--danger-dim);color:var(--danger)}
+.badge-red .badge-dot{background:var(--danger)}
+.badge-gray{background:#7d859022;color:var(--text-muted)}
+.badge-gray .badge-dot{background:var(--text-muted)}
+.badge-blue{background:var(--accent-dim);color:var(--accent)}
+
 table{width:100%;border-collapse:collapse;font-size:.88rem}
-th{text-align:left;padding:.6rem .5rem;color:var(--muted);border-bottom:1px solid #2a3a5c;font-weight:600}
-td{padding:.55rem .5rem;border-bottom:1px solid #1a2540}
-label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:.3rem}
-.form-group{margin-bottom:1rem}
-.stats-row{display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1.2rem}
-.stat-card{flex:1;min-width:120px;background:#0d1b36;border-radius:8px;padding:1rem;text-align:center}
-.stat-card .num{font-size:1.8rem;font-weight:700}
-.stat-card .lbl{font-size:.78rem;color:var(--muted);margin-top:.2rem}
-.tabs{display:flex;gap:0;border-bottom:2px solid #2a3a5c;margin-bottom:1.5rem;overflow-x:auto}
-.tab{padding:.7rem 1.4rem;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap;font-weight:500;transition:color .15s}
-.tab:hover{color:var(--text)}
-.tab.active{color:#fff;border-bottom-color:var(--primary)}
+th{text-align:left;padding:.75rem .8rem;color:var(--text-muted);font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)}
+td{padding:.85rem .8rem;border-bottom:1px solid var(--border)}
+tbody tr{transition:var(--transition)}
+tbody tr:hover{background:var(--card-hover)}
+tbody tr:last-child td{border-bottom:none}
+.cell-mono{font-family:'JetBrains Mono','SF Mono',Consolas,monospace;font-size:.78rem;color:var(--text-muted)}
+.cell-stack{display:flex;flex-direction:column;gap:.15rem}
+.cell-stack small{color:var(--text-muted);font-size:.75rem}
+
+.form-group{margin-bottom:1.1rem}
+.form-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.8rem;margin-bottom:1.2rem}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.1rem;display:flex;flex-direction:column;gap:.25rem;transition:var(--transition)}
+.stat-card:hover{border-color:var(--border-strong)}
+.stat-card .num{font-size:1.8rem;font-weight:700;line-height:1}
+.stat-card .lbl{font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+.stat-card .icon{position:absolute;right:1rem;top:1rem;color:var(--text-dim)}
+
+.tabs{display:flex;gap:.25rem;border-bottom:1px solid var(--border);margin-bottom:1.5rem;overflow-x:auto;padding-bottom:0}
+.tab{padding:.7rem 1.1rem;cursor:pointer;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;font-weight:500;transition:var(--transition);display:flex;align-items:center;gap:.5rem;border-radius:var(--radius) var(--radius) 0 0}
+.tab:hover{color:var(--text);background:var(--card)}
+.tab.active{color:var(--text);border-bottom-color:var(--accent);font-weight:600}
 .tab-content{display:none}
-.tab-content.active{display:block}
-.log-area{background:#0a0f1e;border:1px solid #1a2540;border-radius:8px;padding:1rem;font-family:'Courier New',monospace;font-size:.82rem;max-height:250px;overflow-y:auto;margin-top:1rem}
-.log-area p{margin:.3rem 0}
-.log-ok{color:#2ecc71}
-.log-err{color:#e94560}
-.log-info{color:#3498db}
-.log-warn{color:#f39c12}
-.container{max-width:1100px;margin:0 auto;padding:1.5rem}
-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:.8rem}
-header h1{font-size:1.6rem;color:#fff}
-header h1 span{color:var(--primary)}
-.check-row{display:flex;flex-wrap:wrap;gap:.8rem}
-.check-row label{display:flex;align-items:center;gap:.4rem;color:var(--text);cursor:pointer;font-size:.9rem}
-.check-row input[type=checkbox]{width:auto;accent-color:var(--primary)}
-#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1rem}
-#login-box{width:100%;max-width:400px}
+.tab-content.active{display:block;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+.check-row{display:flex;flex-wrap:wrap;gap:.6rem}
+.check-row label{display:flex;align-items:center;gap:.45rem;color:var(--text);cursor:pointer;font-size:.88rem;background:var(--bg-elev);padding:.5rem .85rem;border-radius:var(--radius);border:1px solid var(--border);transition:var(--transition);margin-bottom:0}
+.check-row label:hover{border-color:var(--border-strong)}
+.check-row label:has(input:checked){background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
+.check-row input[type=checkbox]{width:auto;margin:0;accent-color:var(--accent)}
+
+.log-area{background:#0a0d14;border:1px solid var(--border);border-radius:var(--radius);padding:.9rem;font-family:'JetBrains Mono','SF Mono',Consolas,monospace;font-size:.8rem;max-height:260px;overflow-y:auto;margin-top:1rem}
+.log-area p{margin:.25rem 0;padding-left:.5rem;border-left:2px solid transparent}
+.log-area .log-ok{color:var(--success);border-left-color:var(--success)}
+.log-area .log-err{color:var(--danger);border-left-color:var(--danger)}
+.log-area .log-info{color:var(--accent);border-left-color:var(--accent)}
+.log-area .log-warn{color:var(--warn);border-left-color:var(--warn)}
+
+.empty-state{text-align:center;padding:3rem 1rem;color:var(--text-muted)}
+.empty-state svg{margin:0 auto .75rem;display:block;color:var(--text-dim)}
+.empty-state p{font-size:.92rem}
+
+.skeleton{background:linear-gradient(90deg,var(--card) 0%,var(--card-hover) 50%,var(--card) 100%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:var(--radius);height:1rem;margin:.4rem 0}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+.container{max-width:1200px;margin:0 auto;padding:1.5rem}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:.8rem;padding-bottom:1rem;border-bottom:1px solid var(--border)}
+.logo{display:flex;align-items:center;gap:.65rem;font-size:1.25rem;font-weight:700;color:var(--text)}
+.logo-mark{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--accent) 0%,#7c5cff 100%);display:grid;place-items:center;color:#fff;box-shadow:0 4px 12px var(--accent-dim)}
+.user-info{display:flex;align-items:center;gap:.85rem}
+.user-pill{display:flex;align-items:center;gap:.5rem;background:var(--card);border:1px solid var(--border);padding:.4rem .8rem;border-radius:99px;font-size:.85rem;color:var(--text-muted)}
+.user-pill .avatar{width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:700;font-size:.75rem}
+
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1rem;background:radial-gradient(circle at 30% 0%,rgba(79,140,255,.12) 0%,transparent 50%),radial-gradient(circle at 70% 100%,rgba(124,92,255,.1) 0%,transparent 50%),var(--bg)}
+#login-box{width:100%;max-width:420px}
+#login-box .card{padding:2rem;box-shadow:var(--shadow-lg)}
+.login-logo{display:flex;flex-direction:column;align-items:center;margin-bottom:1.75rem}
+.login-logo .logo-mark{width:56px;height:56px;border-radius:14px;margin-bottom:.85rem}
+.login-logo h1{font-size:1.4rem;font-weight:700}
+.login-logo p{font-size:.85rem;color:var(--text-muted);margin-top:.25rem}
+.error-msg{color:var(--danger);font-size:.85rem;margin-top:.85rem;padding:.6rem .8rem;background:var(--danger-dim);border-radius:var(--radius);border-left:3px solid var(--danger);display:none}
+.error-msg.show{display:flex;align-items:center;gap:.5rem}
+
 #app-screen{display:none}
-@media(max-width:768px){.container{padding:1rem}.stats-row{gap:.6rem}.stat-card{min-width:80px;padding:.7rem}.stat-card .num{font-size:1.3rem}th,td{padding:.4rem .3rem;font-size:.8rem}.tab{padding:.55rem .9rem;font-size:.88rem}}
+
+#toasts{position:fixed;top:1.25rem;right:1.25rem;z-index:9999;display:flex;flex-direction:column;gap:.65rem;max-width:380px;width:calc(100% - 2.5rem)}
+.toast{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius);padding:.85rem 1rem;display:flex;align-items:flex-start;gap:.6rem;box-shadow:var(--shadow-lg);animation:slideIn .25s ease;cursor:pointer}
+.toast.toast-success{border-left-color:var(--success)}
+.toast.toast-success .toast-icon{color:var(--success)}
+.toast.toast-error{border-left-color:var(--danger)}
+.toast.toast-error .toast-icon{color:var(--danger)}
+.toast.toast-warn{border-left-color:var(--warn)}
+.toast.toast-warn .toast-icon{color:var(--warn)}
+.toast.toast-info .toast-icon{color:var(--accent)}
+.toast.removing{animation:slideOut .25s ease forwards}
+.toast-icon{flex-shrink:0;margin-top:1px}
+.toast-content{flex:1;font-size:.88rem;line-height:1.4}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+@keyframes slideOut{to{opacity:0;transform:translateX(20px)}}
+
+#modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);z-index:9998;display:none;align-items:center;justify-content:center;padding:1rem;animation:fadeIn .15s ease}
+#modal-overlay.show{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;max-width:440px;width:100%;box-shadow:var(--shadow-lg);animation:modalIn .2s ease}
+@keyframes modalIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+.modal-icon{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;margin-bottom:1rem}
+.modal-icon.danger{background:var(--danger-dim);color:var(--danger)}
+.modal-icon.warn{background:var(--warn-dim);color:var(--warn)}
+.modal-icon.info{background:var(--accent-dim);color:var(--accent)}
+.modal h3{font-size:1.1rem;font-weight:600;margin-bottom:.4rem}
+.modal p{color:var(--text-muted);font-size:.9rem;margin-bottom:1.25rem;line-height:1.5}
+.modal-actions{display:flex;gap:.6rem;justify-content:flex-end}
+
+.filter-row{display:flex;gap:.5rem;flex-wrap:wrap}
+.filter-row select{width:auto;padding:.4rem .7rem;font-size:.82rem}
+
+.section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.1rem;flex-wrap:wrap;gap:.6rem}
+.refresh-meta{font-size:.78rem;color:var(--text-muted);display:flex;align-items:center;gap:.35rem}
+
+@media(max-width:768px){
+  .container{padding:1rem}
+  .form-grid-2{grid-template-columns:1fr}
+  .stat-card .num{font-size:1.4rem}
+  th,td{padding:.5rem .45rem;font-size:.8rem}
+  .tab{padding:.55rem .85rem;font-size:.85rem}
+  .check-row label{padding:.4rem .7rem;font-size:.82rem}
+  header .logo{font-size:1.1rem}
+}
 </style>
 </head>
 <body>
 
+<!-- TOASTS -->
+<div id="toasts"></div>
+
+<!-- MODAL -->
+<div id="modal-overlay">
+  <div class="modal" id="modal-box"></div>
+</div>
+
 <!-- LOGIN SCREEN -->
 <div id="login-screen">
-<div id="login-box" class="card">
-  <h1 style="font-size:1.6rem;margin-bottom:.3rem;color:#fff">O <span style="color:var(--primary)">Guardiao</span></h1>
-  <p style="color:var(--muted);font-size:.88rem;margin-bottom:1.5rem">Painel de Governanca de Acessos</p>
-  <form id="form-login">
-    <div class="form-group"><label>Email</label><input type="email" id="login-email" required placeholder="admin@empresa.com"></div>
-    <div class="form-group"><label>Senha</label><input type="password" id="login-senha" required placeholder="Sua senha"></div>
-    <button type="submit" class="btn-primary" style="width:100%">Entrar</button>
-    <p id="login-error" style="color:var(--danger);font-size:.85rem;margin-top:.8rem;display:none"></p>
-  </form>
+<div id="login-box">
+  <div class="card">
+    <div class="login-logo">
+      <div class="logo-mark">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+      <h1>O Guardião</h1>
+      <p>Painel de Governança de Acessos</p>
+    </div>
+    <form id="form-login">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="login-email" required placeholder="admin@empresa.com" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label>Senha</label>
+        <input type="password" id="login-senha" required placeholder="Sua senha" autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn-primary btn-full" id="btn-login" data-loading-text="Autenticando...">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+        Entrar
+      </button>
+      <div id="login-error" class="error-msg">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span id="login-error-text"></span>
+      </div>
+    </form>
+  </div>
 </div>
 </div>
 
@@ -78,33 +220,60 @@ header h1 span{color:var(--primary)}
 <div class="container">
 
 <header>
-  <h1>O <span>Guardiao</span></h1>
-  <div style="display:flex;align-items:center;gap:1rem">
-    <span id="user-email" style="color:var(--muted);font-size:.85rem"></span>
-    <button class="btn-sm btn-danger" onclick="logout()">Sair</button>
+  <div class="logo">
+    <div class="logo-mark">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    </div>
+    O Guardião
+  </div>
+  <div class="user-info">
+    <div class="user-pill">
+      <div class="avatar" id="user-avatar">?</div>
+      <span id="user-email"></span>
+    </div>
+    <button class="btn-ghost btn-sm" onclick="logout()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sair
+    </button>
   </div>
 </header>
 
 <div class="tabs">
-  <div class="tab active" data-tab="admissao">Admissao</div>
-  <div class="tab" data-tab="demissao">Demissao</div>
-  <div class="tab" data-tab="dispositivos">Dispositivos</div>
-  <div class="tab" data-tab="tickets">Tickets</div>
+  <div class="tab active" data-tab="admissao">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+    Admissão
+  </div>
+  <div class="tab" data-tab="demissao">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/></svg>
+    Demissão
+  </div>
+  <div class="tab" data-tab="dispositivos">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+    Dispositivos
+  </div>
+  <div class="tab" data-tab="tickets">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    Tickets
+  </div>
 </div>
 
 <!-- TAB: ADMISSAO -->
 <div id="tab-admissao" class="tab-content active">
 <div class="card">
-  <h2 style="margin-bottom:1rem;font-size:1.15rem">Provisionar Novo Colaborador</h2>
+  <div class="card-title">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+    Provisionar Novo Colaborador
+  </div>
+  <p class="card-subtitle">Cria registro de acesso, envia boas-vindas no Slack e gera tickets manuais para sistemas legados.</p>
   <form id="form-admissao">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
-      <div class="form-group"><label>Nome completo</label><input type="text" id="adm-nome" required></div>
-      <div class="form-group"><label>Email corporativo</label><input type="email" id="adm-email" required></div>
+    <div class="form-grid-2">
+      <div class="form-group"><label>Nome completo</label><input type="text" id="adm-nome" required placeholder="João da Silva"></div>
+      <div class="form-group"><label>Email corporativo</label><input type="email" id="adm-email" required placeholder="joao@empresa.com"></div>
     </div>
     <div class="form-group">
       <label>Departamento</label>
       <select id="adm-dept">
-        <option>Engenharia</option><option>Vendas</option><option>Marketing</option><option>Financeiro</option><option>RH</option><option>TI</option><option>Operacoes</option>
+        <option>Engenharia</option><option>Vendas</option><option>Marketing</option><option>Financeiro</option><option>RH</option><option>TI</option><option>Operações</option>
       </select>
     </div>
     <div class="form-group">
@@ -116,23 +285,30 @@ header h1 span{color:var(--primary)}
         <label><input type="checkbox" value="Outro"> Outro</label>
       </div>
     </div>
-    <button type="submit" class="btn-success" style="width:100%">Provisionar Colaborador</button>
+    <button type="submit" class="btn-success btn-full" id="btn-admissao" data-loading-text="Provisionando...">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      Provisionar Colaborador
+    </button>
   </form>
-  <div id="log-admissao" class="log-area"><p class="log-info">Aguardando...</p></div>
+  <div id="log-admissao" class="log-area" style="display:none"></div>
 </div>
 </div>
 
 <!-- TAB: DEMISSAO -->
 <div id="tab-demissao" class="tab-content">
 <div class="card">
-  <h2 style="margin-bottom:1rem;font-size:1.15rem;color:var(--danger)">Offboarding &mdash; Revogar Acessos</h2>
+  <div class="card-title" style="color:var(--danger)">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+    Offboarding — Revogar Acessos
+  </div>
+  <p class="card-subtitle">Bloqueia todos os dispositivos do colaborador, notifica Slack e gera tickets de revogação.</p>
   <form id="form-demissao">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
-      <div class="form-group"><label>Nome do colaborador</label><input type="text" id="dem-nome" required></div>
-      <div class="form-group"><label>Email corporativo</label><input type="email" id="dem-email" required></div>
+    <div class="form-grid-2">
+      <div class="form-group"><label>Nome do colaborador</label><input type="text" id="dem-nome" required placeholder="João da Silva"></div>
+      <div class="form-group"><label>Email corporativo</label><input type="email" id="dem-email" required placeholder="joao@empresa.com"></div>
     </div>
     <div class="form-group">
-      <label>Sistemas para gerar tickets de revogacao</label>
+      <label>Sistemas para gerar tickets de revogação</label>
       <div class="check-row">
         <label><input type="checkbox" value="TOTVS"> TOTVS</label>
         <label><input type="checkbox" value="Sankhya"> Sankhya</label>
@@ -140,26 +316,38 @@ header h1 span{color:var(--primary)}
         <label><input type="checkbox" value="Outro"> Outro</label>
       </div>
     </div>
-    <button type="submit" class="btn-danger" style="width:100%">Revogar Acessos &mdash; Offboarding</button>
+    <button type="submit" class="btn-danger btn-full" id="btn-demissao" data-loading-text="Revogando...">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+      Revogar Acessos — Offboarding
+    </button>
   </form>
-  <div id="log-demissao" class="log-area"><p class="log-info">Aguardando...</p></div>
+  <div id="log-demissao" class="log-area" style="display:none"></div>
 </div>
 </div>
 
 <!-- TAB: DISPOSITIVOS -->
 <div id="tab-dispositivos" class="tab-content">
 <div class="card">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">
-    <h2 style="font-size:1.15rem">Dispositivos da Empresa</h2>
-    <span id="disp-refresh" style="font-size:.78rem;color:var(--muted)">Auto-refresh: 30s</span>
+  <div class="section-header">
+    <div class="card-title" style="margin:0">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      Dispositivos da Empresa
+    </div>
+    <span class="refresh-meta">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      Auto-refresh: 30s
+    </span>
   </div>
   <div style="overflow-x:auto">
   <table id="tbl-dispositivos">
-    <thead><tr><th>Hostname</th><th>Serial</th><th>SO</th><th>Status</th><th>Heartbeat</th><th>Acoes</th></tr></thead>
+    <thead><tr><th>Hostname</th><th>Serial</th><th>SO</th><th>Status</th><th>Último heartbeat</th><th style="text-align:right">Ações</th></tr></thead>
     <tbody></tbody>
   </table>
   </div>
-  <p id="disp-empty" style="color:var(--muted);text-align:center;padding:2rem;display:none">Nenhum dispositivo registrado</p>
+  <div id="disp-empty" class="empty-state" style="display:none">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+    <p>Nenhum dispositivo registrado ainda.</p>
+  </div>
 </div>
 </div>
 
@@ -167,21 +355,27 @@ header h1 span{color:var(--primary)}
 <div id="tab-tickets" class="tab-content">
 <div class="stats-row" id="ticket-stats"></div>
 <div class="card">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">
-    <h2 style="font-size:1.15rem">Tickets de Tarefa</h2>
-    <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-      <select id="filtro-status" style="width:auto;padding:.35rem .6rem;font-size:.82rem"><option value="">Status</option><option>ABERTO</option><option>EM_ANDAMENTO</option><option>FECHADO</option></select>
-      <select id="filtro-tipo" style="width:auto;padding:.35rem .6rem;font-size:.82rem"><option value="">Tipo</option><option>ADMISSAO</option><option>DEMISSAO</option></select>
-      <select id="filtro-sistema" style="width:auto;padding:.35rem .6rem;font-size:.82rem"><option value="">Sistema</option><option>TOTVS</option><option>Sankhya</option><option>NetSuite</option><option>Outro</option></select>
+  <div class="section-header">
+    <div class="card-title" style="margin:0">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      Tickets de Tarefa
+    </div>
+    <div class="filter-row">
+      <select id="filtro-status"><option value="">Status: todos</option><option>ABERTO</option><option>EM_ANDAMENTO</option><option>FECHADO</option></select>
+      <select id="filtro-tipo"><option value="">Tipo: todos</option><option>ADMISSAO</option><option>DEMISSAO</option></select>
+      <select id="filtro-sistema"><option value="">Sistema: todos</option><option>TOTVS</option><option>Sankhya</option><option>NetSuite</option><option>Outro</option></select>
     </div>
   </div>
   <div style="overflow-x:auto">
   <table id="tbl-tickets">
-    <thead><tr><th>Colaborador</th><th>Tipo</th><th>Sistema</th><th>Status</th><th>Criado</th><th>Acoes</th></tr></thead>
+    <thead><tr><th>Colaborador</th><th>Tipo</th><th>Sistema</th><th>Status</th><th>Criado</th><th style="text-align:right">Ações</th></tr></thead>
     <tbody></tbody>
   </table>
   </div>
-  <p id="tickets-empty" style="color:var(--muted);text-align:center;padding:2rem;display:none">Nenhum ticket encontrado</p>
+  <div id="tickets-empty" class="empty-state" style="display:none">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    <p>Nenhum ticket encontrado com os filtros atuais.</p>
+  </div>
 </div>
 </div>
 
@@ -193,202 +387,356 @@ header h1 span{color:var(--primary)}
 let TOKEN = null;
 const API = window.location.origin;
 
-// --- AUTH ---
+// ============ UI HELPERS ============
+const ICONS = {
+  spinner: '<svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>',
+  check: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  alert: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+  info: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+  lock: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+  unlock: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>',
+};
+
+function showToast(msg, type='info', duration=4000){
+  const wrap = document.getElementById('toasts');
+  const t = document.createElement('div');
+  t.className = 'toast toast-'+type;
+  const icon = type==='success'?ICONS.check : type==='error'?ICONS.alert : type==='warn'?ICONS.alert : ICONS.info;
+  t.innerHTML = '<span class="toast-icon">'+icon+'</span><span class="toast-content">'+escapeHtml(msg)+'</span>';
+  const dismiss = ()=>{ t.classList.add('removing'); setTimeout(()=>t.remove(), 250); };
+  t.addEventListener('click', dismiss);
+  wrap.appendChild(t);
+  if(duration) setTimeout(dismiss, duration);
+}
+
+function showConfirm({title, message, confirmText='Confirmar', cancelText='Cancelar', danger=false, icon='warn'}){
+  return new Promise(resolve=>{
+    const ov = document.getElementById('modal-overlay');
+    const box = document.getElementById('modal-box');
+    const iconSvg = danger || icon==='danger' ? ICONS.alert : icon==='info' ? ICONS.info : ICONS.alert;
+    const iconClass = danger ? 'danger' : (icon==='info' ? 'info' : 'warn');
+    box.innerHTML = '<div class="modal-icon '+iconClass+'">'+iconSvg+'</div>'+
+      '<h3>'+escapeHtml(title)+'</h3>'+
+      '<p>'+escapeHtml(message)+'</p>'+
+      '<div class="modal-actions">'+
+        '<button class="btn-ghost" id="modal-cancel">'+escapeHtml(cancelText)+'</button>'+
+        '<button class="'+(danger?'btn-danger':'btn-primary')+'" id="modal-confirm">'+escapeHtml(confirmText)+'</button>'+
+      '</div>';
+    ov.classList.add('show');
+    const close = (val)=>{ ov.classList.remove('show'); resolve(val); };
+    document.getElementById('modal-confirm').onclick = ()=>close(true);
+    document.getElementById('modal-cancel').onclick = ()=>close(false);
+    ov.onclick = (e)=>{ if(e.target===ov) close(false); };
+  });
+}
+
+function setLoading(btnId, loading){
+  const btn = document.getElementById(btnId);
+  if(!btn) return;
+  if(loading){
+    if(!btn.dataset.originalHtml) btn.dataset.originalHtml = btn.innerHTML;
+    const txt = btn.dataset.loadingText || 'Aguarde...';
+    btn.innerHTML = ICONS.spinner+' '+txt;
+    btn.disabled = true;
+  } else {
+    btn.innerHTML = btn.dataset.originalHtml || btn.innerHTML;
+    btn.disabled = false;
+  }
+}
+
+function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+
+function fmtDate(iso){
+  if(!iso) return '—';
+  try { return new Date(iso).toLocaleString('pt-BR', {dateStyle:'short', timeStyle:'short'}); }
+  catch { return iso; }
+}
+
+// ============ API ============
 function headers(){ return {"Content-Type":"application/json","Authorization":"Bearer "+TOKEN} }
 
 async function api(method, path, body){
   const opts = {method, headers: headers()};
   if(body) opts.body = JSON.stringify(body);
   const r = await fetch(API + path, opts);
-  const d = await r.json();
-  if(!r.ok) throw {status:r.status, detail:d.detail||"Erro"};
+  let d;
+  try { d = await r.json(); } catch { d = {detail:'Resposta inválida'}; }
+  if(!r.ok) throw {status:r.status, detail:d.detail||'Erro '+r.status};
   return d;
 }
 
-document.getElementById("form-login").addEventListener("submit", async(e)=>{
+// ============ LOGIN ============
+document.getElementById('form-login').addEventListener('submit', async(e)=>{
   e.preventDefault();
-  const err = document.getElementById("login-error");
-  err.style.display="none";
+  const err = document.getElementById('login-error');
+  err.classList.remove('show');
+  setLoading('btn-login', true);
   try{
-    const d = await fetch(API+"/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:document.getElementById("login-email").value,senha:document.getElementById("login-senha").value})});
+    const d = await fetch(API+'/auth/login', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email:document.getElementById('login-email').value, senha:document.getElementById('login-senha').value})
+    });
     const j = await d.json();
-    if(!d.ok){err.textContent=j.detail;err.style.display="block";return}
+    if(!d.ok){
+      document.getElementById('login-error-text').textContent = j.detail || 'Falha no login';
+      err.classList.add('show');
+      return;
+    }
     TOKEN = j.access_token;
-    const payload = JSON.parse(atob(TOKEN.split(".")[1]));
-    document.getElementById("user-email").textContent = payload.sub;
-    document.getElementById("login-screen").style.display="none";
-    document.getElementById("app-screen").style.display="block";
+    const payload = JSON.parse(atob(TOKEN.split('.')[1]));
+    document.getElementById('user-email').textContent = payload.sub;
+    document.getElementById('user-avatar').textContent = (payload.sub[0]||'?').toUpperCase();
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app-screen').style.display = 'block';
+    showToast('Bem-vindo, '+payload.sub, 'success');
     loadTickets(); loadDispositivos(); loadTicketStats();
-  }catch(ex){err.textContent="Erro de conexao";err.style.display="block"}
+  }catch(ex){
+    document.getElementById('login-error-text').textContent = 'Erro de conexão. Tente novamente.';
+    err.classList.add('show');
+  } finally {
+    setLoading('btn-login', false);
+  }
 });
 
-window.logout = function(){ TOKEN=null; document.getElementById("app-screen").style.display="none"; document.getElementById("login-screen").style.display="flex"; };
+window.logout = async function(){
+  if(!await showConfirm({title:'Sair', message:'Encerrar sessão neste painel?', confirmText:'Sair', icon:'info'})) return;
+  TOKEN = null;
+  document.getElementById('app-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+};
 
-// --- TABS ---
-document.querySelectorAll(".tab").forEach(t=>{
-  t.addEventListener("click",()=>{
-    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
-    document.querySelectorAll(".tab-content").forEach(x=>x.classList.remove("active"));
-    t.classList.add("active");
-    document.getElementById("tab-"+t.dataset.tab).classList.add("active");
-    if(t.dataset.tab==="dispositivos") loadDispositivos();
-    if(t.dataset.tab==="tickets"){loadTickets();loadTicketStats();}
+// ============ TABS ============
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-'+t.dataset.tab).classList.add('active');
+    if(t.dataset.tab==='dispositivos') loadDispositivos();
+    if(t.dataset.tab==='tickets'){ loadTickets(); loadTicketStats(); }
   });
 });
 
-// --- LOG HELPER ---
-function addLog(id,msg,cls){
-  const el=document.getElementById(id);
-  el.innerHTML+='<p class="'+cls+'">'+msg+'</p>';
-  el.scrollTop=el.scrollHeight;
+// ============ LOG HELPER ============
+function addLog(id, msg, cls){
+  const el = document.getElementById(id);
+  el.style.display = 'block';
+  const p = document.createElement('p');
+  p.className = cls;
+  p.textContent = msg;
+  el.appendChild(p);
+  el.scrollTop = el.scrollHeight;
+}
+function clearLog(id){
+  const el = document.getElementById(id);
+  el.innerHTML = '';
+  el.style.display = 'none';
 }
 
-// --- ADMISSAO ---
-document.getElementById("form-admissao").addEventListener("submit", async(e)=>{
+// ============ ADMISSAO ============
+document.getElementById('form-admissao').addEventListener('submit', async(e)=>{
   e.preventDefault();
-  const nome = document.getElementById("adm-nome").value;
-  const email = document.getElementById("adm-email").value;
-  const dept = document.getElementById("adm-dept").value;
+  const nome = document.getElementById('adm-nome').value;
+  const email = document.getElementById('adm-email').value;
+  const dept = document.getElementById('adm-dept').value;
   const sistemas = [...document.querySelectorAll('#tab-admissao .check-row input:checked')].map(c=>c.value);
-  const log = "log-admissao";
-  document.getElementById(log).innerHTML="";
+  const log = 'log-admissao';
+  clearLog(log);
+  setLoading('btn-admissao', true);
 
-  addLog(log, "Iniciando onboarding de "+nome+"...", "log-warn");
+  addLog(log, '→ Iniciando onboarding de '+nome+'...', 'log-info');
   try{
-    const ob = await api("POST","/api/v1/onboarding",{email,departamento:dept});
-    addLog(log, "Registro de acesso criado para "+ob.email, "log-ok");
+    const ob = await api('POST', '/api/v1/onboarding', {email, departamento:dept});
+    addLog(log, '✓ Registro de acesso criado para '+ob.email, 'log-ok');
     if(ob.integracoes){
       for(const [svc, status] of Object.entries(ob.integracoes)){
-        const cls = String(status).startsWith("erro") ? "log-err" : "log-ok";
-        addLog(log, svc.toUpperCase()+": "+status, cls);
+        const cls = String(status).startsWith('erro') ? 'log-err' : 'log-ok';
+        addLog(log, '  ['+svc.toUpperCase()+'] '+status, cls);
       }
     }
-  }catch(ex){ addLog(log, "Erro onboarding: "+ex.detail, "log-err") }
+  }catch(ex){
+    addLog(log, '✗ Erro onboarding: '+ex.detail, 'log-err');
+    showToast('Falha no onboarding', 'error');
+    setLoading('btn-admissao', false);
+    return;
+  }
 
   if(sistemas.length > 0){
-    addLog(log, "Gerando tickets para: "+sistemas.join(", ")+"...", "log-info");
+    addLog(log, '→ Gerando tickets para: '+sistemas.join(', '), 'log-info');
     try{
-      const tk = await api("POST","/api/v1/tickets/gerar",{colaborador_nome:nome,colaborador_email:email,tipo:"ADMISSAO",departamento:dept,sistemas});
-      tk.tickets.forEach(t=>addLog(log, "Ticket "+t.sistema+" aberto (ID: "+t.id.slice(0,8)+"...)", "log-ok"));
-    }catch(ex){ addLog(log, "Erro tickets: "+ex.detail, "log-err") }
+      const tk = await api('POST', '/api/v1/tickets/gerar', {colaborador_nome:nome, colaborador_email:email, tipo:'ADMISSAO', departamento:dept, sistemas});
+      tk.tickets.forEach(t=>addLog(log, '  ✓ Ticket '+t.sistema+' criado ('+t.id.slice(0,8)+')', 'log-ok'));
+    }catch(ex){
+      addLog(log, '✗ Erro tickets: '+ex.detail, 'log-err');
+    }
   }
-  addLog(log, "Onboarding concluido!", "log-ok");
+  addLog(log, '✓ Onboarding concluído', 'log-ok');
+  showToast('Colaborador '+nome+' provisionado', 'success');
+  setLoading('btn-admissao', false);
 });
 
-// --- DEMISSAO ---
-document.getElementById("form-demissao").addEventListener("submit", async(e)=>{
+// ============ DEMISSAO ============
+document.getElementById('form-demissao').addEventListener('submit', async(e)=>{
   e.preventDefault();
-  if(!confirm("Confirma o offboarding? Todos os acessos serao revogados.")) return;
-  const nome = document.getElementById("dem-nome").value;
-  const email = document.getElementById("dem-email").value;
+  const nome = document.getElementById('dem-nome').value;
+  const email = document.getElementById('dem-email').value;
   const sistemas = [...document.querySelectorAll('#tab-demissao .check-row input:checked')].map(c=>c.value);
-  const log = "log-demissao";
-  document.getElementById(log).innerHTML="";
 
-  addLog(log, "OFFBOARDING: Revogando acessos de "+nome+"...", "log-err");
+  if(!await showConfirm({
+    title: 'Confirmar offboarding',
+    message: 'Todos os dispositivos ativos serão BLOQUEADOS e tickets de revogação serão gerados. Ação irreversível.',
+    confirmText: 'Sim, revogar acessos',
+    danger: true,
+  })) return;
+
+  const log = 'log-demissao';
+  clearLog(log);
+  setLoading('btn-demissao', true);
+  addLog(log, '→ OFFBOARDING: revogando acessos de '+nome+'...', 'log-err');
 
   try{
-    const disps = await api("GET","/api/v1/agente/dispositivos");
-    const alvos = disps.filter(d=>d.status!=="BLOQUEADO").map(d=>d.serial_placa_mae);
+    const disps = await api('GET', '/api/v1/agente/dispositivos');
+    const alvos = disps.filter(d=>d.status!=='BLOQUEADO').map(d=>d.serial_placa_mae);
     if(alvos.length){
-      const r = await api("POST","/api/v1/agente/lock-bulk",{seriais:alvos});
-      r.bloqueados.forEach(b=>addLog(log, "Dispositivo "+b.hostname+" BLOQUEADO", "log-err"));
+      const r = await api('POST', '/api/v1/agente/lock-bulk', {seriais:alvos});
+      r.bloqueados.forEach(b=>addLog(log, '  🔒 '+b.hostname+' BLOQUEADO', 'log-err'));
+      if(!r.bloqueados.length) addLog(log, '  Nenhum dispositivo bloqueado', 'log-warn');
     } else {
-      addLog(log, "Nenhum dispositivo ativo para bloquear", "log-info");
+      addLog(log, '  Nenhum dispositivo ativo para bloquear', 'log-info');
     }
-  }catch(ex){ addLog(log, "Aviso: nao foi possivel bloquear dispositivos", "log-warn") }
+  }catch(ex){
+    addLog(log, '✗ Erro ao bloquear dispositivos: '+ex.detail, 'log-warn');
+  }
 
   if(sistemas.length > 0){
-    addLog(log, "Gerando tickets de revogacao...", "log-info");
+    addLog(log, '→ Gerando tickets de revogação...', 'log-info');
     try{
-      const tk = await api("POST","/api/v1/tickets/gerar",{colaborador_nome:nome,colaborador_email:email,tipo:"DEMISSAO",departamento:"",sistemas});
-      tk.tickets.forEach(t=>addLog(log, "Ticket DEMISSAO "+t.sistema+" aberto", "log-ok"));
-    }catch(ex){ addLog(log, "Erro tickets: "+ex.detail, "log-err") }
+      const tk = await api('POST', '/api/v1/tickets/gerar', {colaborador_nome:nome, colaborador_email:email, tipo:'DEMISSAO', departamento:'', sistemas});
+      tk.tickets.forEach(t=>addLog(log, '  ✓ Ticket DEMISSAO '+t.sistema+' aberto', 'log-ok'));
+    }catch(ex){
+      addLog(log, '✗ Erro tickets: '+ex.detail, 'log-err');
+    }
   }
-  addLog(log, "Offboarding concluido. Acessos revogados.", "log-ok");
+  addLog(log, '✓ Offboarding concluído', 'log-ok');
+  showToast('Offboarding de '+nome+' concluído', 'success');
+  setLoading('btn-demissao', false);
 });
 
-// --- DISPOSITIVOS ---
+// ============ DISPOSITIVOS ============
 async function loadDispositivos(){
   if(!TOKEN) return;
   try{
-    const data = await api("GET","/api/v1/agente/dispositivos");
-    const tbody = document.querySelector("#tbl-dispositivos tbody");
-    const empty = document.getElementById("disp-empty");
-    if(!data.length){tbody.innerHTML="";empty.style.display="block";return}
-    empty.style.display="none";
+    const data = await api('GET', '/api/v1/agente/dispositivos');
+    const tbody = document.querySelector('#tbl-dispositivos tbody');
+    const empty = document.getElementById('disp-empty');
+    if(!data.length){
+      tbody.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
     tbody.innerHTML = data.map(d=>{
-      let badge="badge-gray", label=d.status;
-      if(d.status==="ATIVO"&&d.online){badge="badge-green"}
-      else if(d.status==="BLOQUEADO"){badge="badge-red"}
-      else if(d.status==="ATIVO"&&!d.online){badge="badge-yellow";label="INATIVO"}
-      else if(d.status==="PENDENTE"){badge="badge-gray"}
-      const hb = d.ultimo_heartbeat ? new Date(d.ultimo_heartbeat).toLocaleString("pt-BR") : "Nunca";
-      const lockBtn = d.status==="BLOQUEADO"
-        ? '<button class="btn-sm btn-success" onclick="unlockDevice(\''+d.serial_placa_mae+'\')">Desbloquear</button>'
-        : '<button class="btn-sm btn-danger" onclick="lockDevice(\''+d.serial_placa_mae+'\')">Bloquear</button>';
-      return '<tr><td>'+d.hostname+'</td><td style="font-size:.8rem;color:var(--muted)">'+d.serial_placa_mae+'</td><td>'+(d.sistema_operacional||"-")+'</td><td><span class="badge '+badge+'">'+label+'</span></td><td style="font-size:.82rem">'+hb+'</td><td>'+lockBtn+'</td></tr>';
-    }).join("");
-  }catch(ex){}
+      let badge='badge-gray', label=d.status;
+      if(d.status==='ATIVO' && d.online){ badge='badge-green'; }
+      else if(d.status==='BLOQUEADO'){ badge='badge-red'; }
+      else if(d.status==='ATIVO' && !d.online){ badge='badge-yellow'; label='INATIVO'; }
+      const lockBtn = d.status==='BLOQUEADO'
+        ? '<button class="btn-sm btn-success" onclick="unlockDevice(\''+escapeHtml(d.serial_placa_mae)+'\',\''+escapeHtml(d.hostname)+'\')">'+ICONS.unlock+' Desbloquear</button>'
+        : '<button class="btn-sm btn-danger" onclick="lockDevice(\''+escapeHtml(d.serial_placa_mae)+'\',\''+escapeHtml(d.hostname)+'\')">'+ICONS.lock+' Bloquear</button>';
+      return '<tr>'+
+        '<td><div class="cell-stack"><strong>'+escapeHtml(d.hostname)+'</strong><small>'+escapeHtml(d.sistema_operacional||'—')+'</small></div></td>'+
+        '<td class="cell-mono">'+escapeHtml(d.serial_placa_mae)+'</td>'+
+        '<td><span class="badge badge-blue">'+escapeHtml(d.versao_agente||'sem agente')+'</span></td>'+
+        '<td><span class="badge '+badge+'"><span class="badge-dot"></span>'+label+'</span></td>'+
+        '<td style="font-size:.82rem">'+fmtDate(d.ultimo_heartbeat)+'</td>'+
+        '<td style="text-align:right">'+lockBtn+'</td>'+
+      '</tr>';
+    }).join('');
+  }catch(ex){
+    showToast('Falha ao listar dispositivos: '+ex.detail, 'error');
+  }
 }
 
-window.lockDevice = async function(serial){
-  if(!confirm("Bloquear dispositivo "+serial+"?")) return;
-  try{await api("POST","/api/v1/agente/lock/"+serial);loadDispositivos()}catch(ex){alert("Erro: "+ex.detail)}
+window.lockDevice = async function(serial, hostname){
+  if(!await showConfirm({title:'Bloquear dispositivo', message:'Confirma bloquear '+hostname+'?', confirmText:'Bloquear', danger:true})) return;
+  try{
+    await api('POST', '/api/v1/agente/lock/'+encodeURIComponent(serial));
+    showToast(hostname+' bloqueado', 'success');
+    loadDispositivos();
+  }catch(ex){ showToast('Erro: '+ex.detail, 'error'); }
 };
-window.unlockDevice = async function(serial){
-  if(!confirm("Desbloquear dispositivo "+serial+"?")) return;
-  try{await api("POST","/api/v1/agente/unlock/"+serial);loadDispositivos()}catch(ex){alert("Erro: "+ex.detail)}
+window.unlockDevice = async function(serial, hostname){
+  if(!await showConfirm({title:'Desbloquear dispositivo', message:'Confirma desbloquear '+hostname+'?', confirmText:'Desbloquear', icon:'info'})) return;
+  try{
+    await api('POST', '/api/v1/agente/unlock/'+encodeURIComponent(serial));
+    showToast(hostname+' desbloqueado', 'success');
+    loadDispositivos();
+  }catch(ex){ showToast('Erro: '+ex.detail, 'error'); }
 };
 
 setInterval(()=>{
-  if(TOKEN && document.getElementById("tab-dispositivos").classList.contains("active")) loadDispositivos();
-},30000);
+  if(TOKEN && document.getElementById('tab-dispositivos').classList.contains('active')) loadDispositivos();
+}, 30000);
 
-// --- TICKETS ---
+// ============ TICKETS ============
 async function loadTicketStats(){
   if(!TOKEN) return;
   try{
-    const s = await api("GET","/api/v1/tickets/stats");
-    document.getElementById("ticket-stats").innerHTML=
-      '<div class="stat-card"><div class="num">'+s.total+'</div><div class="lbl">Total</div></div>'+
-      '<div class="stat-card"><div class="num" style="color:#2ecc71">'+s.abertos+'</div><div class="lbl">Abertos</div></div>'+
-      '<div class="stat-card"><div class="num" style="color:#f39c12">'+s.em_andamento+'</div><div class="lbl">Em Andamento</div></div>'+
-      '<div class="stat-card"><div class="num" style="color:var(--muted)">'+s.fechados+'</div><div class="lbl">Fechados</div></div>';
+    const s = await api('GET', '/api/v1/tickets/stats');
+    document.getElementById('ticket-stats').innerHTML =
+      '<div class="stat-card"><div class="lbl">Total</div><div class="num">'+s.total+'</div></div>'+
+      '<div class="stat-card"><div class="lbl">Abertos</div><div class="num" style="color:var(--success)">'+s.abertos+'</div></div>'+
+      '<div class="stat-card"><div class="lbl">Em andamento</div><div class="num" style="color:var(--warn)">'+s.em_andamento+'</div></div>'+
+      '<div class="stat-card"><div class="lbl">Fechados</div><div class="num" style="color:var(--text-muted)">'+s.fechados+'</div></div>';
   }catch(ex){}
 }
 
 async function loadTickets(){
   if(!TOKEN) return;
   const params = new URLSearchParams();
-  const s=document.getElementById("filtro-status").value; if(s) params.set("status",s);
-  const t=document.getElementById("filtro-tipo").value; if(t) params.set("tipo",t);
-  const si=document.getElementById("filtro-sistema").value; if(si) params.set("sistema",si);
+  const s = document.getElementById('filtro-status').value; if(s) params.set('status', s);
+  const t = document.getElementById('filtro-tipo').value; if(t) params.set('tipo', t);
+  const si = document.getElementById('filtro-sistema').value; if(si) params.set('sistema', si);
   try{
-    const data = await api("GET","/api/v1/tickets?"+params.toString());
-    const tbody = document.querySelector("#tbl-tickets tbody");
-    const empty = document.getElementById("tickets-empty");
-    if(!data.length){tbody.innerHTML="";empty.style.display="block";return}
-    empty.style.display="none";
+    const data = await api('GET', '/api/v1/tickets?'+params.toString());
+    const tbody = document.querySelector('#tbl-tickets tbody');
+    const empty = document.getElementById('tickets-empty');
+    if(!data.length){ tbody.innerHTML=''; empty.style.display='block'; return; }
+    empty.style.display = 'none';
     tbody.innerHTML = data.map(tk=>{
-      let badge="badge-green",label=tk.status;
-      if(tk.status==="FECHADO"){badge="badge-gray"}else if(tk.status==="EM_ANDAMENTO"){badge="badge-yellow"}
-      const criado = tk.criado_em ? new Date(tk.criado_em).toLocaleString("pt-BR") : "-";
-      const tipoBadge = tk.tipo==="DEMISSAO"?"badge-red":"badge-green";
-      const acao = tk.status!=="FECHADO"?'<button class="btn-sm btn-primary" onclick="fecharTicket(\''+tk.id+'\')">Fechar</button>':'<span style="color:var(--muted);font-size:.8rem">Fechado</span>';
-      return '<tr><td>'+tk.colaborador_nome+'<br><span style="font-size:.78rem;color:var(--muted)">'+tk.colaborador_email+'</span></td><td><span class="badge '+tipoBadge+'">'+tk.tipo+'</span></td><td>'+tk.sistema+'</td><td><span class="badge '+badge+'">'+label+'</span></td><td style="font-size:.82rem">'+criado+'</td><td>'+acao+'</td></tr>';
-    }).join("");
-  }catch(ex){}
+      let badge='badge-green', label=tk.status;
+      if(tk.status==='FECHADO'){ badge='badge-gray'; }
+      else if(tk.status==='EM_ANDAMENTO'){ badge='badge-yellow'; }
+      const tipoBadge = tk.tipo==='DEMISSAO' ? 'badge-red' : 'badge-green';
+      const acao = tk.status!=='FECHADO'
+        ? '<button class="btn-sm btn-primary" onclick="fecharTicket(\''+tk.id+'\')">'+ICONS.check+' Fechar</button>'
+        : '<span style="color:var(--text-dim);font-size:.78rem">já fechado</span>';
+      return '<tr>'+
+        '<td><div class="cell-stack"><strong>'+escapeHtml(tk.colaborador_nome)+'</strong><small>'+escapeHtml(tk.colaborador_email)+'</small></div></td>'+
+        '<td><span class="badge '+tipoBadge+'">'+tk.tipo+'</span></td>'+
+        '<td>'+escapeHtml(tk.sistema)+'</td>'+
+        '<td><span class="badge '+badge+'"><span class="badge-dot"></span>'+label+'</span></td>'+
+        '<td style="font-size:.82rem">'+fmtDate(tk.criado_em)+'</td>'+
+        '<td style="text-align:right">'+acao+'</td>'+
+      '</tr>';
+    }).join('');
+  }catch(ex){
+    showToast('Falha ao listar tickets: '+ex.detail, 'error');
+  }
 }
 
 window.fecharTicket = async function(id){
-  if(!confirm("Fechar este ticket?")) return;
-  try{await api("PATCH","/api/v1/tickets/"+id+"/fechar");loadTickets();loadTicketStats()}catch(ex){alert("Erro: "+ex.detail)}
+  if(!await showConfirm({title:'Fechar ticket', message:'Marcar este ticket como concluído?', confirmText:'Fechar ticket', icon:'info'})) return;
+  try{
+    await api('PATCH', '/api/v1/tickets/'+id+'/fechar');
+    showToast('Ticket fechado', 'success');
+    loadTickets(); loadTicketStats();
+  }catch(ex){ showToast('Erro: '+ex.detail, 'error'); }
 };
 
-document.getElementById("filtro-status").addEventListener("change",loadTickets);
-document.getElementById("filtro-tipo").addEventListener("change",loadTickets);
-document.getElementById("filtro-sistema").addEventListener("change",loadTickets);
+document.getElementById('filtro-status').addEventListener('change', loadTickets);
+document.getElementById('filtro-tipo').addEventListener('change', loadTickets);
+document.getElementById('filtro-sistema').addEventListener('change', loadTickets);
 
 })();
 </script>
