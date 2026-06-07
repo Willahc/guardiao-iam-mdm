@@ -1,5 +1,6 @@
 .env
 .agent.env
+.guardiao_serial
 *.pyc
 __pycache__/
 *.db

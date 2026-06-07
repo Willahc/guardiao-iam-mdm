@@ -176,6 +176,31 @@ def desbloquear_dispositivo(
     }
 
 
+@router.delete("/dispositivo/{dispositivo_id}")
+def deletar_dispositivo(
+    dispositivo_id: str,
+    db: Session = Depends(get_db),
+    admin: models.Usuario = Depends(require_admin),
+):
+    dispositivo = db.query(models.Dispositivo).filter(
+        models.Dispositivo.id == dispositivo_id,
+        models.Dispositivo.empresa_id == admin.empresa_id,
+    ).first()
+    if not dispositivo:
+        raise HTTPException(status_code=404, detail="Dispositivo não encontrado")
+
+    snapshot = {
+        "id": dispositivo.id,
+        "serial_placa_mae": dispositivo.serial_placa_mae,
+        "hostname": dispositivo.hostname,
+        "status": dispositivo.status,
+    }
+    db.delete(dispositivo)
+    db.commit()
+    registrar_auditoria(db, admin.empresa_id, "DEVICE_DELETE", admin.email, detalhes=snapshot)
+    return {"status": "sucesso", "deletado": snapshot}
+
+
 @router.post("/{serial}/regenerar-token")
 def regenerar_token_agente(
     serial: str,
