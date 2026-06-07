@@ -7,9 +7,12 @@ from fastapi.responses import FileResponse
 
 import models
 from database import aplicar_indices_runtime, engine
-from routers import agente, auth, billing, integracoes, lgpd, onboarding, tenant, tickets
+from routers import agente, auth, billing, health, integracoes, lgpd, onboarding, tenant, tickets
 
-logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    format=os.getenv("LOG_FORMAT", "%(asctime)s [%(levelname)s] %(name)s: %(message)s"),
+)
 
 models.Base.metadata.create_all(bind=engine)
 aplicar_indices_runtime()
@@ -36,6 +39,7 @@ def exibir_painel_executivo():
     return FileResponse("painel.html")
 
 
+app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(tenant.router)
 app.include_router(onboarding.router)
