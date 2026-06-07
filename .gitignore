@@ -1,10 +1,15 @@
 .env
+.agent.env
 *.pyc
 __pycache__/
 *.db
+*.log
 build/
 dist/
 *.spec
 *.egg-info/
 .venv/
 venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
