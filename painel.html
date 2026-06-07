@@ -256,7 +256,13 @@ document.getElementById("form-admissao").addEventListener("submit", async(e)=>{
   addLog(log, "Iniciando onboarding de "+nome+"...", "log-warn");
   try{
     const ob = await api("POST","/api/v1/onboarding",{email,departamento:dept});
-    ob.logs.forEach(l=>addLog(log, l, "log-ok"));
+    addLog(log, "Registro de acesso criado para "+ob.email, "log-ok");
+    if(ob.integracoes){
+      for(const [svc, status] of Object.entries(ob.integracoes)){
+        const cls = String(status).startsWith("erro") ? "log-err" : "log-ok";
+        addLog(log, svc.toUpperCase()+": "+status, cls);
+      }
+    }
   }catch(ex){ addLog(log, "Erro onboarding: "+ex.detail, "log-err") }
 
   if(sistemas.length > 0){
@@ -283,15 +289,14 @@ document.getElementById("form-demissao").addEventListener("submit", async(e)=>{
 
   try{
     const disps = await api("GET","/api/v1/agente/dispositivos");
-    for(const d of disps){
-      if(d.status !== "BLOQUEADO"){
-        try{
-          await api("POST","/api/v1/agente/lock/"+d.serial_placa_mae);
-          addLog(log, "Dispositivo "+d.hostname+" BLOQUEADO", "log-err");
-        }catch(ex){}
-      }
+    const alvos = disps.filter(d=>d.status!=="BLOQUEADO").map(d=>d.serial_placa_mae);
+    if(alvos.length){
+      const r = await api("POST","/api/v1/agente/lock-bulk",{seriais:alvos});
+      r.bloqueados.forEach(b=>addLog(log, "Dispositivo "+b.hostname+" BLOQUEADO", "log-err"));
+    } else {
+      addLog(log, "Nenhum dispositivo ativo para bloquear", "log-info");
     }
-  }catch(ex){ addLog(log, "Aviso: nao foi possivel listar dispositivos", "log-warn") }
+  }catch(ex){ addLog(log, "Aviso: nao foi possivel bloquear dispositivos", "log-warn") }
 
   if(sistemas.length > 0){
     addLog(log, "Gerando tickets de revogacao...", "log-info");
