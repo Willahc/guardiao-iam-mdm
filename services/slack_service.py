@@ -1,11 +1,14 @@
 import logging
 import os
+import time
 
 import requests
 
 logger = logging.getLogger(__name__)
 
 SLACK_TIMEOUT = 10
+SLACK_CACHE_TTL = 3600
+_user_cache: dict[str, tuple[float, dict]] = {}
 
 
 def _token():
@@ -20,6 +23,12 @@ def buscar_usuario_por_email(email: str) -> dict | None:
     if not _token():
         logger.warning("SLACK_BOT_TOKEN não configurado — ignorando busca de usuário")
         return None
+
+    agora = time.time()
+    cached = _user_cache.get(email)
+    if cached and agora - cached[0] < SLACK_CACHE_TTL:
+        return cached[1]
+
     try:
         resp = requests.get(
             "https://slack.com/api/users.lookupByEmail",
@@ -29,7 +38,9 @@ def buscar_usuario_por_email(email: str) -> dict | None:
         )
         data = resp.json()
         if data.get("ok"):
-            return data["user"]
+            user = data["user"]
+            _user_cache[email] = (agora, user)
+            return user
         logger.warning("Slack lookupByEmail falhou: %s", data.get("error"))
         return None
     except requests.RequestException as exc:

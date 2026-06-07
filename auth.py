@@ -13,10 +13,31 @@ from database import get_db
 
 load_dotenv()
 
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-troque-em-producao")
+APP_ENV = os.getenv("APP_ENV", "production").lower()
+_DEV_SECRET = "dev-secret-troque-em-producao"
+
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    if APP_ENV in ("dev", "development", "local", "test"):
+        SECRET_KEY = _DEV_SECRET
+    else:
+        raise RuntimeError("SECRET_KEY não configurada — defina a variável de ambiente em produção")
+
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
-AGENT_JWT_SECRET = os.getenv("AGENT_JWT_SECRET", SECRET_KEY)
+
+import logging as _logging
+
+AGENT_JWT_SECRET = os.getenv("AGENT_JWT_SECRET")
+if not AGENT_JWT_SECRET:
+    AGENT_JWT_SECRET = SECRET_KEY + "-agent"
+    if APP_ENV not in ("dev", "development", "local", "test"):
+        _logging.getLogger(__name__).critical(
+            "AGENT_JWT_SECRET não configurada — usando derivado de SECRET_KEY. "
+            "Configure a variável no ambiente e re-registre os agentes."
+        )
+elif AGENT_JWT_SECRET == SECRET_KEY:
+    raise RuntimeError("AGENT_JWT_SECRET não pode ser igual a SECRET_KEY")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
