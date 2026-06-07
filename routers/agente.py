@@ -7,7 +7,7 @@ import models
 from auditoria import registrar_auditoria
 from auth import criar_agent_token, require_admin, get_usuario_atual, validar_agent_token
 from database import get_db
-from schemas import AgentePingRequest, BulkLockRequest, RegistrarDispositivoRequest
+from schemas import AgentePingRequest, BulkLockRequest, RegistrarDispositivoRequest, VincularDispositivoRequest
 
 router = APIRouter(tags=["Agente MDM"], prefix="/api/v1/agente")
 
@@ -199,6 +199,53 @@ def deletar_dispositivo(
     db.commit()
     registrar_auditoria(db, admin.empresa_id, "DEVICE_DELETE", admin.email, detalhes=snapshot)
     return {"status": "sucesso", "deletado": snapshot}
+
+
+@router.patch("/dispositivo/{serial}/vincular")
+def vincular_dispositivo(
+    serial: str,
+    dados: VincularDispositivoRequest,
+    db: Session = Depends(get_db),
+    admin: models.Usuario = Depends(require_admin),
+):
+    dispositivo = db.query(models.Dispositivo).filter(
+        models.Dispositivo.serial_placa_mae == serial,
+        models.Dispositivo.empresa_id == admin.empresa_id,
+    ).first()
+    if not dispositivo:
+        raise HTTPException(status_code=404, detail="Dispositivo não encontrado")
+
+    usuario = db.query(models.Usuario).filter(
+        models.Usuario.email == dados.usuario_email,
+        models.Usuario.empresa_id == admin.empresa_id,
+    ).first()
+    if not usuario:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Usuário '{dados.usuario_email}' não encontrado nesta empresa. Crie o usuário antes de vincular um dispositivo.",
+        )
+
+    dispositivo.usuario_id = usuario.id
+    if dispositivo.status == "PENDENTE":
+        dispositivo.status = "ATIVO"
+    db.commit()
+    db.refresh(dispositivo)
+    registrar_auditoria(
+        db, admin.empresa_id, "DEVICE_VINCULAR", admin.email,
+        usuario.email, {"serial": serial, "hostname": dispositivo.hostname, "usuario_id": usuario.id},
+    )
+
+    return {
+        "status": "sucesso",
+        "dispositivo": {
+            "id": dispositivo.id,
+            "serial_placa_mae": dispositivo.serial_placa_mae,
+            "hostname": dispositivo.hostname,
+            "status": dispositivo.status,
+            "usuario_id": dispositivo.usuario_id,
+            "usuario_email": usuario.email,
+        },
+    }
 
 
 @router.post("/{serial}/regenerar-token")

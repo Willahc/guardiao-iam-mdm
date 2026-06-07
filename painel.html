@@ -277,6 +277,15 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
       </select>
     </div>
     <div class="form-group">
+      <label>Dispositivo a vincular <span style="color:var(--text-dim);font-weight:normal">(opcional)</span></label>
+      <select id="adm-dispositivo">
+        <option value="">— Nenhum (vincular depois) —</option>
+      </select>
+      <small style="display:block;color:var(--text-muted);font-size:.78rem;margin-top:.35rem">
+        Apenas dispositivos com status PENDENTE aparecem aqui. Vincular liga o hardware ao colaborador para que o offboarding bloqueie automaticamente.
+      </small>
+    </div>
+    <div class="form-group">
       <label>Sistemas sem API (tickets manuais)</label>
       <div class="check-row">
         <label><input type="checkbox" value="TOTVS"> TOTVS</label>
@@ -489,7 +498,7 @@ document.getElementById('form-login').addEventListener('submit', async(e)=>{
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app-screen').style.display = 'block';
     showToast('Bem-vindo, '+payload.sub, 'success');
-    loadTickets(); loadDispositivos(); loadTicketStats();
+    loadTickets(); loadDispositivos(); loadTicketStats(); loadDispositivosPendentes();
   }catch(ex){
     document.getElementById('login-error-text').textContent = 'Erro de conexão. Tente novamente.';
     err.classList.add('show');
@@ -514,8 +523,22 @@ document.querySelectorAll('.tab').forEach(t=>{
     document.getElementById('tab-'+t.dataset.tab).classList.add('active');
     if(t.dataset.tab==='dispositivos') loadDispositivos();
     if(t.dataset.tab==='tickets'){ loadTickets(); loadTicketStats(); }
+    if(t.dataset.tab==='admissao') loadDispositivosPendentes();
   });
 });
+
+async function loadDispositivosPendentes(){
+  if(!TOKEN) return;
+  try{
+    const data = await api('GET', '/api/v1/agente/dispositivos');
+    const pendentes = data.filter(d=>d.status==='PENDENTE');
+    const sel = document.getElementById('adm-dispositivo');
+    const current = sel.value;
+    sel.innerHTML = '<option value="">— Nenhum (vincular depois) —</option>' +
+      pendentes.map(d=>'<option value="'+escapeHtml(d.serial_placa_mae)+'">'+escapeHtml(d.hostname)+' · '+escapeHtml(d.serial_placa_mae.slice(0,12))+'…</option>').join('');
+    if(current && pendentes.some(d=>d.serial_placa_mae===current)) sel.value = current;
+  }catch(ex){}
+}
 
 // ============ LOG HELPER ============
 function addLog(id, msg, cls){
@@ -539,6 +562,7 @@ document.getElementById('form-admissao').addEventListener('submit', async(e)=>{
   const nome = document.getElementById('adm-nome').value;
   const email = document.getElementById('adm-email').value;
   const dept = document.getElementById('adm-dept').value;
+  const serialDispositivo = document.getElementById('adm-dispositivo').value;
   const sistemas = [...document.querySelectorAll('#tab-admissao .check-row input:checked')].map(c=>c.value);
   const log = 'log-admissao';
   clearLog(log);
@@ -570,6 +594,20 @@ document.getElementById('form-admissao').addEventListener('submit', async(e)=>{
       addLog(log, '✗ Erro tickets: '+ex.detail, 'log-err');
     }
   }
+
+  if(serialDispositivo){
+    addLog(log, '→ Vinculando dispositivo '+serialDispositivo.slice(0,12)+'... ao colaborador...', 'log-info');
+    try{
+      const v = await api('PATCH', '/api/v1/agente/dispositivo/'+encodeURIComponent(serialDispositivo)+'/vincular', {usuario_email:email});
+      addLog(log, '  ✓ '+v.dispositivo.hostname+' vinculado a '+v.dispositivo.usuario_email+' (status: '+v.dispositivo.status+')', 'log-ok');
+      loadDispositivosPendentes();
+      loadDispositivos();
+    }catch(ex){
+      addLog(log, '✗ Erro vincular dispositivo: '+ex.detail, 'log-err');
+      showToast('Onboarding ok, mas vínculo falhou: '+ex.detail, 'warn', 6000);
+    }
+  }
+
   addLog(log, '✓ Onboarding concluído', 'log-ok');
   showToast('Colaborador '+nome+' provisionado', 'success');
   setLoading('btn-admissao', false);

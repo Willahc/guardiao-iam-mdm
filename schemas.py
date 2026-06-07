@@ -77,3 +77,7 @@ class JiraTicketRequest(BaseModel):
 
 class BulkLockRequest(BaseModel):
     seriais: list[str]
+
+
+class VincularDispositivoRequest(BaseModel):
+    usuario_email: str
