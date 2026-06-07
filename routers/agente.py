@@ -176,6 +176,33 @@ def desbloquear_dispositivo(
     }
 
 
+@router.post("/{serial}/regenerar-token")
+def regenerar_token_agente(
+    serial: str,
+    db: Session = Depends(get_db),
+    admin: models.Usuario = Depends(require_admin),
+):
+    dispositivo = db.query(models.Dispositivo).filter(
+        models.Dispositivo.serial_placa_mae == serial,
+        models.Dispositivo.empresa_id == admin.empresa_id,
+    ).first()
+    if not dispositivo:
+        raise HTTPException(status_code=404, detail="Dispositivo não encontrado")
+
+    novo_token = criar_agent_token(serial, admin.empresa_id)
+    registrar_auditoria(
+        db, admin.empresa_id, "AGENT_TOKEN_REGENERATED", admin.email,
+        detalhes={"serial": serial, "hostname": dispositivo.hostname},
+    )
+    return {
+        "status": "sucesso",
+        "serial_placa_mae": serial,
+        "hostname": dispositivo.hostname,
+        "agent_token": novo_token,
+        "mensagem": "Cole este token em .agent.env (AGENT_TOKEN=...) no dispositivo e reinicie o agente.",
+    }
+
+
 @router.get("/dispositivos")
 def listar_dispositivos(
     skip: int = Query(0, ge=0),
