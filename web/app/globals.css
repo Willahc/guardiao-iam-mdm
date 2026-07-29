@@ -712,6 +712,12 @@ footer { padding-top: 20px; padding-bottom: 20px; }
   border-radius: 0;
 }
 
+.inventoryLayout > .inventorySummary div {
+  align-content: center;
+  justify-items: center;
+  gap: 7px;
+}
+
 .inventoryLayout > .lifecycleWorkspace,
 .inventoryLayout > .inventoryTable,
 .inventoryLayout > .inventoryTimeline {
