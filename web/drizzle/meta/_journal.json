@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1785320908931,
+      "tag": "0000_odd_giant_girl",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1785323001740,
+      "tag": "0001_classy_pride",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1785324434455,
+      "tag": "0002_sad_tombstone",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1785326301064,
+      "tag": "0003_oval_lily_hollister",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1785327689327,
+      "tag": "0004_shocking_screwball",
+      "breakpoints": true
+    }
+  ]
+}

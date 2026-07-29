@@ -14,7 +14,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 import models
-from database import Base, get_db
+from database import Base, engine as app_engine, get_db
 from main import app
 
 
@@ -24,6 +24,8 @@ def engine():
     Base.metadata.create_all(bind=eng)
     yield eng
     Base.metadata.drop_all(bind=eng)
+    app_engine.dispose()
+    eng.dispose()
     try:
         os.remove("test_guardiao.db")
     except FileNotFoundError:
