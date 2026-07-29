@@ -1115,3 +1115,137 @@ footer {
   .module,
   .module.twoColumns { margin: 12px 10px 84px; }
 }
+
+/* Guardião console 3.0 — list-first workspace and contextual action drawers */
+.module,
+.module.twoColumns {
+  display: grid;
+  gap: 16px;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  background: transparent;
+}
+
+.module > .registry,
+.module > .connectorSection,
+.module > .inventorySummary,
+.module > .applicationStats,
+.module > .governanceStats,
+.module > .lifecycleWorkspace,
+.module > .softwareGrid,
+.module > .governanceGrid,
+.module > .profileList {
+  border: 1px solid var(--console-border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--console-surface);
+}
+
+.module:not(.twoColumns) > * + * { border-top: 1px solid var(--console-border); }
+.module.twoColumns { grid-template-columns: 1fr; }
+.module.twoColumns > .profileList { min-height: 220px; }
+.module.twoColumns > .profileList .profileCard {
+  min-height: 0;
+  border-top-color: var(--console-red) !important;
+}
+
+.inventoryLayout { grid-template-columns: 1fr !important; }
+.inventoryLayout > .inventorySummary {
+  grid-column: 1;
+  grid-row: 1;
+  border: 1px solid var(--console-border);
+}
+.inventoryLayout > .inventoryTable {
+  grid-column: 1;
+  grid-row: 2;
+  border-top: 1px solid var(--console-border);
+}
+.inventoryLayout > .lifecycleWorkspace {
+  grid-column: 1;
+  grid-row: 3;
+  border-top: 1px solid var(--console-border);
+}
+.inventoryLayout > .inventoryTimeline {
+  grid-column: 1;
+  grid-row: 4;
+}
+
+.softwareGrid { grid-template-columns: 1fr; }
+.softwareGrid > .registry { border: 0; }
+
+.governanceGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 0 !important;
+  gap: 16px;
+  background: transparent !important;
+  overflow: visible !important;
+}
+.governanceGrid > .panel {
+  border: 1px solid var(--console-border);
+  border-radius: 6px;
+}
+.governanceGrid > :nth-child(odd) { border-right: 1px solid var(--console-border); }
+.governanceGrid > .riskPanel { grid-column: span 1; }
+
+.actionDrawer {
+  display: none;
+}
+.actionDrawer.open {
+  position: fixed;
+  z-index: 80;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: block;
+  width: min(540px, calc(100vw - 24px));
+  padding: 26px;
+  overflow-y: auto;
+  border: 0 !important;
+  border-left: 1px solid var(--console-border) !important;
+  border-radius: 0 !important;
+  background: var(--console-surface) !important;
+  box-shadow: -18px 0 50px rgba(0,0,0,.22) !important;
+  animation: drawerIn .18s ease-out;
+}
+.drawerBackdrop {
+  position: fixed;
+  z-index: 70;
+  inset: 0;
+  border: 0;
+  background: rgba(6,8,10,.58);
+  backdrop-filter: blur(2px);
+}
+.drawerClose {
+  width: 32px;
+  height: 32px;
+  margin-left: auto;
+  border: 1px solid var(--console-border);
+  border-radius: 4px;
+  background: var(--console-subtle);
+  color: var(--console-text);
+  font-size: 20px;
+  line-height: 1;
+}
+.drawerClose:hover { border-color: var(--console-red); color: var(--console-red); }
+@keyframes drawerIn { from { transform: translateX(24px); opacity: .65; } }
+
+.onboardingPanel + .registry { grid-row: 1; }
+.profileList { grid-row: 1; }
+.applicationsModule > .applicationStats { order: 1; }
+.applicationsModule > .softwareGrid { order: 2; }
+.applicationsModule > .commandQueue { order: 3; }
+
+@media (max-width: 1100px) {
+  .governanceGrid { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 760px) {
+  .module,
+  .module.twoColumns { gap: 10px; }
+  .governanceGrid { grid-template-columns: 1fr; gap: 10px; }
+  .actionDrawer.open {
+    width: 100%;
+    padding: 20px 16px 90px;
+  }
+}

@@ -28,6 +28,7 @@ export default function Dashboard({ admin }: { admin: AdminUser }) {
   const [notice, setNotice] = useState<ApiResult | null>(null);
   const [selectedTools, setSelectedTools] = useState<number[]>([]);
   const [tab, setTab] = useState<"people" | "profiles" | "inventory" | "applications" | "governance">("people");
+  const [activeDialog, setActiveDialog] = useState<"people" | "profiles" | "inventory" | "applications" | "governance" | null>(null);
   const [pendingOffboard, setPendingOffboard] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -67,7 +68,7 @@ export default function Dashboard({ admin }: { admin: AdminUser }) {
       name: form.get("name"), description: form.get("description"), color: form.get("color"),
       role: form.get("role"), scope: form.get("scope"), tool_ids: selectedTools,
     }, "profile");
-    if (ok) { formElement.reset(); setSelectedTools([]); }
+    if (ok) { formElement.reset(); setSelectedTools([]); setActiveDialog(null); }
   }
 
   async function addNotebook(event: FormEvent<HTMLFormElement>) {
@@ -79,7 +80,7 @@ export default function Dashboard({ admin }: { admin: AdminUser }) {
       condition: form.get("condition"), location: form.get("location"), warranty_until: form.get("warranty_until"),
       encrypted: form.get("encrypted") === "on",
     }, "notebook");
-    if (ok) formElement.reset();
+    if (ok) { formElement.reset(); setActiveDialog(null); }
   }
 
   async function onboarding(event: FormEvent<HTMLFormElement>) {
@@ -89,7 +90,7 @@ export default function Dashboard({ admin }: { admin: AdminUser }) {
     const ok = await submit("/api/v1/onboarding", {
       name: form.get("name"), email: form.get("email"), profile_id: form.get("profile_id"), notebook_id: form.get("notebook_id"),
     }, "onboarding");
-    if (ok) formElement.reset();
+    if (ok) { formElement.reset(); setActiveDialog(null); }
   }
 
   async function offboard(email: string) {
@@ -100,13 +101,13 @@ export default function Dashboard({ admin }: { admin: AdminUser }) {
   async function requestAccess(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); const formElement = event.currentTarget; const form = new FormData(formElement);
     const ok = await submit("/api/v1/access-requests", { user_id: form.get("user_id"), tool_id: form.get("tool_id"), requested_role: form.get("requested_role"), justification: form.get("justification"), expires_at: form.get("expires_at") }, "access-request");
-    if (ok) formElement.reset();
+    if (ok) { formElement.reset(); setActiveDialog(null); }
   }
 
   async function createCampaign(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); const formElement = event.currentTarget; const form = new FormData(formElement);
     const ok = await submit("/api/v1/recertifications", { name: form.get("name"), due_at: form.get("due_at") }, "campaign");
-    if (ok) formElement.reset();
+    if (ok) { formElement.reset(); setActiveDialog(null); }
   }
 
   async function assignAdmin(event: FormEvent<HTMLFormElement>) {
@@ -173,7 +174,7 @@ export default function Dashboard({ admin }: { admin: AdminUser }) {
 
       <section className="hero compactHero moduleHero" id="top">
         <div className="pageIdentity"><p className="eyebrow">{moduleMeta.eyebrow}</p><h1>{moduleMeta.title} <em>{moduleMeta.highlight}</em></h1><p className="heroCopy">{moduleMeta.copy}</p></div>
-        <div className="pageActions"><span className="environmentState"><i /> Ambiente operacional</span><button className="primary compactAction" type="button" onClick={() => document.getElementById(moduleMeta.target)?.scrollIntoView({ behavior: "smooth", block: "start" })}>+ {moduleMeta.action}</button></div>
+        <div className="pageActions"><span className="environmentState"><i /> Ambiente operacional</span><button className="primary compactAction" type="button" onClick={() => setActiveDialog(tab)}>+ {moduleMeta.action}</button></div>
         <div className="statusCard">
           <div className="pulse"><i /> POSTURA OPERACIONAL</div>
           <div className="metric"><strong>{activeUsers.length}</strong><span>identidades ativas</span></div>
@@ -199,9 +200,11 @@ export default function Dashboard({ admin }: { admin: AdminUser }) {
         <button className={tab === "governance" ? "active" : ""} onClick={() => setTab("governance")}><span className="navIcon">G</span><span><strong>Governança</strong><small>Decisões, riscos e auditoria</small></span><b>{data.requests.filter((item) => item.status === "pending").length}</b></button>
       </nav>
 
+      {activeDialog && <button className="drawerBackdrop" type="button" onClick={() => setActiveDialog(null)} aria-label="Fechar painel" />}
+
       {tab === "people" && <section className="module">
-        <div className="panel onboardingPanel" id="people-action">
-          <div className="panelHeading"><span className="step">01</span><div><p>ENTRADA DE COLABORADOR</p><h2>Provisionar por perfil</h2></div></div>
+        <div className={`panel onboardingPanel actionDrawer ${activeDialog === "people" ? "open" : ""}`} id="people-action">
+          <div className="panelHeading"><span className="step">01</span><div><p>ENTRADA DE COLABORADOR</p><h2>Provisionar por perfil</h2></div><button className="drawerClose" type="button" onClick={() => setActiveDialog(null)} aria-label="Fechar">×</button></div>
           <p className="panelCopy">Ao selecionar o perfil, todas as ferramentas permitidas para aquela área são concedidas automaticamente.</p>
           <div className="flowRail"><span className="done">Identidade</span><i /><span>Perfil</span><i /><span>Notebook</span><i /><span>Acessos</span><i /><span>Concluído</span></div>
           {data.profiles.length === 0 || available.length === 0 ? <div className="callout">Cadastre pelo menos um perfil e um notebook disponível antes de provisionar.</div> :
@@ -219,8 +222,8 @@ export default function Dashboard({ admin }: { admin: AdminUser }) {
       </section>}
 
       {tab === "profiles" && <section className="module twoColumns">
-        <div className="panel" id="profiles-action">
-          <div className="panelHeading"><span className="step">02</span><div><p>ROLE-BASED ACCESS</p><h2>Novo perfil de área</h2></div></div>
+        <div className={`panel actionDrawer ${activeDialog === "profiles" ? "open" : ""}`} id="profiles-action">
+          <div className="panelHeading"><span className="step">02</span><div><p>ROLE-BASED ACCESS</p><h2>Novo perfil de área</h2></div><button className="drawerClose" type="button" onClick={() => setActiveDialog(null)} aria-label="Fechar">×</button></div>
           <form onSubmit={createProfile}>
             <div className="formRow"><label>Nome do perfil<input name="name" placeholder="Financeiro" required /></label><label>Cor de identificação<input name="color" type="color" defaultValue="#0b6b4b" /></label></div>
             <label>Descrição<input name="description" placeholder="Conciliação, contas a pagar e controladoria" required /></label>
@@ -238,8 +241,8 @@ export default function Dashboard({ admin }: { admin: AdminUser }) {
       </section>}
 
       {tab === "inventory" && <section className="module twoColumns inventoryLayout">
-        <div className="panel" id="inventory-action">
-          <div className="panelHeading"><span className="step">03</span><div><p>ASSET MANAGEMENT</p><h2>Entrada no estoque</h2></div></div>
+        <div className={`panel actionDrawer ${activeDialog === "inventory" ? "open" : ""}`} id="inventory-action">
+          <div className="panelHeading"><span className="step">03</span><div><p>ASSET MANAGEMENT</p><h2>Entrada no estoque</h2></div><button className="drawerClose" type="button" onClick={() => setActiveDialog(null)} aria-label="Fechar">×</button></div>
           <form onSubmit={addNotebook}>
             <div className="formRow"><label>Patrimônio<input name="asset_tag" placeholder="NTB-0042" required /></label><label>Número de série<input name="serial" placeholder="PF4X9K2" required /></label></div>
             <label>Fabricante e modelo<input name="model" placeholder="Lenovo ThinkPad E14 Gen 6" required /></label>
@@ -297,8 +300,8 @@ export default function Dashboard({ admin }: { admin: AdminUser }) {
           <div><strong>{data.softwareCommands.filter((item) => item.status === "queued").length}</strong><span>Comandos na fila</span></div>
         </div>
         <div className="softwareGrid">
-          <div className="panel" id="applications-action">
-            <div className="panelHeading"><span className="step">04</span><div><p>ADMINISTRAÇÃO REMOTA</p><h2>Instalar ou remover</h2></div></div>
+          <div className={`panel actionDrawer ${activeDialog === "applications" ? "open" : ""}`} id="applications-action">
+            <div className="panelHeading"><span className="step">04</span><div><p>ADMINISTRAÇÃO REMOTA</p><h2>Instalar ou remover</h2></div><button className="drawerClose" type="button" onClick={() => setActiveDialog(null)} aria-label="Fechar">×</button></div>
             <p className="panelCopy">A ação exige perfil administrativo, justificativa e fica registrada. Até o agente ser conectado, a fila opera em modo simulado.</p>
             <div className="simulationBanner"><strong>Modo seguro de simulação</strong><span>Nenhum comando será executado fisicamente no notebook.</span></div>
             <form onSubmit={manageSoftware}>
@@ -330,7 +333,7 @@ export default function Dashboard({ admin }: { admin: AdminUser }) {
         </div>
 
         <div className="governanceGrid">
-          <div className="panel" id="governance-action"><div className="panelHeading"><span className="step">A</span><div><p>ACESSO SOB DEMANDA</p><h2>Solicitar exceção</h2></div></div>
+          <div className={`panel actionDrawer ${activeDialog === "governance" ? "open" : ""}`} id="governance-action"><div className="panelHeading"><span className="step">A</span><div><p>ACESSO SOB DEMANDA</p><h2>Solicitar exceção</h2></div><button className="drawerClose" type="button" onClick={() => setActiveDialog(null)} aria-label="Fechar">×</button></div>
             <form onSubmit={requestAccess}><label>Colaborador<select name="user_id" required defaultValue=""><option value="" disabled>Selecione</option>{activeUsers.map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}</select></label>
               <div className="formRow"><label>Ferramenta<select name="tool_id" required defaultValue=""><option value="" disabled>Selecione</option>{data.tools.map((tool) => <option key={tool.id} value={tool.id}>{tool.name}</option>)}</select></label><label>Papel<select name="requested_role"><option>Leitor</option><option>Operador</option><option>Aprovador</option><option>Administrador</option></select></label></div>
               <label>Justificativa<input name="justification" placeholder="Necessário para fechamento mensal" required /></label><label>Expira em<input name="expires_at" type="date" /></label><button className="primary" disabled={busy !== null}>Enviar para aprovação <span>→</span></button>
