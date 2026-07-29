@@ -114,6 +114,7 @@ export const installedApplications = sqliteTable("installed_applications", {
   version: text("version").notNull(),
   publisher: text("publisher").notNull(),
   policyStatus: text("policy_status").notNull().default("allowed"),
+  source: text("source").notNull().default("agent"),
   detectedAt: text("detected_at").notNull(),
 }, (table) => [uniqueIndex("installed_applications_notebook_name_unique").on(table.notebookId, table.name)]);
 

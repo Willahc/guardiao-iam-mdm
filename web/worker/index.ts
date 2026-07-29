@@ -88,7 +88,7 @@ async function initialize(db: D1Database) {
     db.prepare(`CREATE TABLE IF NOT EXISTS installed_applications (
       id INTEGER PRIMARY KEY AUTOINCREMENT, notebook_id INTEGER NOT NULL, name TEXT NOT NULL,
       version TEXT NOT NULL, publisher TEXT NOT NULL, policy_status TEXT NOT NULL DEFAULT 'allowed',
-      detected_at TEXT NOT NULL, UNIQUE(notebook_id, name)
+      source TEXT NOT NULL DEFAULT 'agent', detected_at TEXT NOT NULL, UNIQUE(notebook_id, name)
     )`),
     db.prepare(`CREATE TABLE IF NOT EXISTS software_commands (
       id INTEGER PRIMARY KEY AUTOINCREMENT, notebook_id INTEGER NOT NULL, action TEXT NOT NULL,
@@ -110,6 +110,9 @@ async function initialize(db: D1Database) {
   if (!notebookNames.has("last_seen_at")) await db.prepare("ALTER TABLE notebooks ADD COLUMN last_seen_at TEXT").run();
   if (!notebookNames.has("custody_location")) await db.prepare("ALTER TABLE notebooks ADD COLUMN custody_location TEXT NOT NULL DEFAULT 'Estoque TI'").run();
   if (!notebookNames.has("next_maintenance_at")) await db.prepare("ALTER TABLE notebooks ADD COLUMN next_maintenance_at TEXT").run();
+  const applicationColumns = await db.prepare("PRAGMA table_info(installed_applications)").all<{ name: string }>();
+  const applicationNames = new Set(applicationColumns.results.map((column) => column.name));
+  if (!applicationNames.has("source")) await db.prepare("ALTER TABLE installed_applications ADD COLUMN source TEXT NOT NULL DEFAULT 'agent'").run();
 
   await db.batch([
     db.prepare("INSERT OR IGNORE INTO tools (name, category) VALUES ('Google Workspace', 'Produtividade')"),
@@ -124,21 +127,21 @@ async function initialize(db: D1Database) {
     db.prepare("INSERT OR IGNORE INTO connectors (name, category, auth_type, description) VALUES ('Intune / MDM', 'Dispositivos', 'OAuth 2.0', 'Compliance, bloqueio e inventário')"),
     db.prepare("INSERT OR IGNORE INTO connectors (name, category, auth_type, description) VALUES ('RH / Folha', 'Pessoas', 'Webhook assinado', 'Admissão, movimentação e desligamento')"),
     db.prepare("INSERT OR IGNORE INTO connectors (name, category, auth_type, description) VALUES ('Service Desk', 'Workflow', 'API Token', 'Chamados, aprovações e evidências')"),
-    db.prepare(`INSERT INTO installed_applications (notebook_id, name, version, publisher, policy_status, detected_at)
-      SELECT n.id, 'Microsoft 365 Apps', '2406', 'Microsoft', 'allowed', datetime('now')
-      FROM notebooks n WHERE NOT EXISTS (
+    db.prepare(`INSERT INTO installed_applications (notebook_id, name, version, publisher, policy_status, source, detected_at)
+      SELECT n.id, 'Microsoft 365 Apps', '2406', 'Microsoft', 'allowed', 'demo', datetime('now')
+      FROM notebooks n WHERE n.id=(SELECT MIN(id) FROM notebooks) AND NOT EXISTS (
         SELECT 1 FROM installed_applications ia WHERE ia.notebook_id=n.id AND ia.name='Microsoft 365 Apps'
-      ) ORDER BY n.id LIMIT 1`),
-    db.prepare(`INSERT INTO installed_applications (notebook_id, name, version, publisher, policy_status, detected_at)
-      SELECT n.id, 'Google Chrome', '126.0', 'Google', 'allowed', datetime('now')
-      FROM notebooks n WHERE NOT EXISTS (
+      )`),
+    db.prepare(`INSERT INTO installed_applications (notebook_id, name, version, publisher, policy_status, source, detected_at)
+      SELECT n.id, 'Google Chrome', '126.0', 'Google', 'allowed', 'demo', datetime('now')
+      FROM notebooks n WHERE n.id=(SELECT MIN(id) FROM notebooks) AND NOT EXISTS (
         SELECT 1 FROM installed_applications ia WHERE ia.notebook_id=n.id AND ia.name='Google Chrome'
-      ) ORDER BY n.id LIMIT 1`),
-    db.prepare(`INSERT INTO installed_applications (notebook_id, name, version, publisher, policy_status, detected_at)
-      SELECT n.id, 'AnyDesk', '8.0', 'AnyDesk Software', 'prohibited', datetime('now')
-      FROM notebooks n WHERE NOT EXISTS (
+      )`),
+    db.prepare(`INSERT INTO installed_applications (notebook_id, name, version, publisher, policy_status, source, detected_at)
+      SELECT n.id, 'AnyDesk', '8.0', 'AnyDesk Software', 'prohibited', 'demo', datetime('now')
+      FROM notebooks n WHERE n.id=(SELECT MIN(id) FROM notebooks) AND NOT EXISTS (
         SELECT 1 FROM installed_applications ia WHERE ia.notebook_id=n.id AND ia.name='AnyDesk'
-      ) ORDER BY n.id LIMIT 1`),
+      )`),
   ]);
 }
 
