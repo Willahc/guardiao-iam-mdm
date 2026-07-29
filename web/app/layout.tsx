@@ -7,12 +7,15 @@ export async function generateMetadata(): Promise<Metadata> {
   const host = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host") || "localhost";
   const protocol = requestHeaders.get("x-forwarded-proto") || (host.includes("localhost") ? "http" : "https");
   const socialImage = `${protocol}://${host}/og.png`;
+
   return {
-    title: "Guardião — Lifecycle de acessos",
-    description: "Onboarding, mudanças e desligamentos auditáveis, combinando automações, simulações e tarefas manuais.",
+    title: "Guardião · Central simples para controlar admissões, mudanças e desligamentos",
+    description: "Controle pessoas, perfis, pendências e evidências sem depender de um console enterprise pesado.",
+    metadataBase: new URL(`${protocol}://${host}`),
     openGraph: {
-      title: "Guardião — Lifecycle de acessos",
-      description: "Controle admissões e desligamentos sem depender de planilha ou de uma suíte IGA enterprise.",
+      title: "Guardião · Central simples para controlar admissões, mudanças e desligamentos",
+      description: "Lifecycle de acessos com foco em operação, evidências e fluxo claro para TI, RH e gestores.",
+      type: "website",
       images: [{ url: socialImage, width: 1536, height: 1024, alt: "Guardião Lifecycle de acessos" }],
     },
     twitter: { card: "summary_large_image", images: [socialImage] },
@@ -23,7 +26,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: `try{const t=localStorage.getItem("guardiao-theme");document.documentElement.dataset.theme=t||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")}catch{}` }} />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{const t=localStorage.getItem("guardiao-theme");document.documentElement.dataset.theme=t||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")}catch{}`,
+          }}
+        />
       </head>
       <body>{children}</body>
     </html>

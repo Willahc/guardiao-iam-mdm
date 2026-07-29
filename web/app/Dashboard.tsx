@@ -1,99 +1,572 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useState } from "react";
 
 type AdminUser = { displayName: string; email: string };
 type Tool = { id: number; name: string; category: string };
-type Profile = { id: number; name: string; description: string; color: string; tool_names: string | null; entitlements?: string | null; members: number };
-type Notebook = { id: number; asset_tag: string; serial: string; model: string; status: string; condition: string; assigned_to?: string; location?: string; encrypted?: number; custody_location?: string; next_maintenance_at?: string };
-type User = { id: number; name: string; email: string; status: string; profile_name?: string; profile_color?: string; asset_tag?: string; model?: string };
-type AccessRequest = { id: number; user_name: string; email: string; tool_name: string; requested_role: string; justification: string; expires_at?: string; status: string };
-type Campaign = { id: number; name: string; due_at: string; status: string; total_items: number; reviewed_items: number };
-type Connector = { id: number; name: string; category: string; status: string; auth_type: string; description: string };
-type Risk = { severity: string; title: string; subject: string; recommendation: string };
-type Audit = { id: number; target_user: string; action_type: string; details: string; created_at: string };
-type AdminAssignment = { id: number; email: string; role: string; permissions: string; status: string };
-type InstalledApplication = { id: number; notebook_id: number; asset_tag: string; model: string; name: string; version: string; publisher: string; policy_status: string; detected_at: string };
-type SoftwareCommand = { id: number; asset_tag: string; action: string; application_name: string; target_version?: string; justification: string; status: string; execution_mode: string; requested_by: string; result?: string; created_at: string };
-type WorkOrder = { id: number; asset_tag: string; model: string; order_type: string; status: string; assignee: string; due_at?: string; checklist: string; notes: string; created_at: string; completed_at?: string };
-type AssetEvent = { id: number; asset_tag: string; event_type: string; details: string; performed_by: string; created_at: string };
-type LifecycleExecution = { id: number; user_id: number; user_name: string; email: string; execution_type: string; status: string; total_steps: number; verified_steps: number; attention_steps: number; created_at: string };
-type ExecutionStep = { id: number; execution_id: number; tool_id?: number; tool_name?: string; user_name: string; email: string; label: string; method: string; status: string; assignee: string; due_at?: string; attempts: number; result?: string; evidence?: string; error?: string };
-type AccessAssignment = { id: number; user_id: number; tool_id: number; user_name: string; email: string; tool_name: string; account_identifier?: string; expected_state: string; observed_state: string; verification_status: string; last_verified_at?: string };
-type Overview = { users: User[]; profiles: Profile[]; tools: Tool[]; notebooks: Notebook[]; requests: AccessRequest[]; campaigns: Campaign[]; connectors: Connector[]; riskFindings: Risk[]; audit: Audit[]; admins: AdminAssignment[]; applications: InstalledApplication[]; softwareCommands: SoftwareCommand[]; workOrders: WorkOrder[]; assetEvents: AssetEvent[]; executions: LifecycleExecution[]; executionSteps: ExecutionStep[]; accessAssignments: AccessAssignment[] };
+type Profile = {
+  id: number;
+  name: string;
+  description: string;
+  color: string;
+  tool_names: string | null;
+  entitlements?: string | null;
+  members: number;
+};
+type Notebook = {
+  id: number;
+  asset_tag: string;
+  serial: string;
+  model: string;
+  status: string;
+  condition: string;
+  assigned_to?: string;
+  location?: string;
+  encrypted?: number;
+  custody_location?: string;
+  next_maintenance_at?: string;
+};
+type User = {
+  id: number;
+  name: string;
+  email: string;
+  status: string;
+  profile_name?: string;
+  profile_color?: string;
+  asset_tag?: string;
+  model?: string;
+};
+type AccessRequest = {
+  id: number;
+  user_name: string;
+  email: string;
+  tool_name: string;
+  requested_role: string;
+  justification: string;
+  expires_at?: string;
+  status: string;
+};
+type Campaign = {
+  id: number;
+  name: string;
+  due_at: string;
+  status: string;
+  total_items: number;
+  reviewed_items: number;
+};
+type Connector = {
+  id: number;
+  name: string;
+  category: string;
+  status: string;
+  auth_type: string;
+  description: string;
+};
+type Risk = {
+  severity: string;
+  title: string;
+  subject: string;
+  recommendation: string;
+};
+type Audit = {
+  id: number;
+  target_user: string;
+  action_type: string;
+  details: string;
+  created_at: string;
+};
+type AdminAssignment = {
+  id: number;
+  email: string;
+  role: string;
+  permissions: string;
+  status: string;
+};
+type InstalledApplication = {
+  id: number;
+  notebook_id: number;
+  asset_tag: string;
+  model: string;
+  name: string;
+  version: string;
+  publisher: string;
+  policy_status: string;
+  detected_at: string;
+};
+type SoftwareCommand = {
+  id: number;
+  asset_tag: string;
+  action: string;
+  application_name: string;
+  target_version?: string;
+  justification: string;
+  status: string;
+  execution_mode: string;
+  requested_by: string;
+  result?: string;
+  created_at: string;
+};
+type WorkOrder = {
+  id: number;
+  asset_tag: string;
+  model: string;
+  order_type: string;
+  status: string;
+  assignee: string;
+  due_at?: string;
+  checklist: string;
+  notes: string;
+  created_at: string;
+  completed_at?: string;
+};
+type AssetEvent = {
+  id: number;
+  asset_tag: string;
+  event_type: string;
+  details: string;
+  performed_by: string;
+  created_at: string;
+};
+type LifecycleExecution = {
+  id: number;
+  user_id: number;
+  user_name: string;
+  email: string;
+  execution_type: string;
+  status: string;
+  total_steps: number;
+  verified_steps: number;
+  attention_steps: number;
+  created_at: string;
+};
+type ExecutionStep = {
+  id: number;
+  execution_id: number;
+  tool_id?: number;
+  tool_name?: string;
+  user_name: string;
+  email: string;
+  label: string;
+  method: string;
+  status: string;
+  assignee: string;
+  due_at?: string;
+  attempts: number;
+  result?: string;
+  evidence?: string;
+  error?: string;
+};
+type AccessAssignment = {
+  id: number;
+  user_id: number;
+  tool_id: number;
+  user_name: string;
+  email: string;
+  tool_name: string;
+  account_identifier?: string;
+  expected_state: string;
+  observed_state: string;
+  verification_status: string;
+  last_verified_at?: string;
+};
+type Overview = {
+  users: User[];
+  profiles: Profile[];
+  tools: Tool[];
+  notebooks: Notebook[];
+  requests: AccessRequest[];
+  campaigns: Campaign[];
+  connectors: Connector[];
+  riskFindings: Risk[];
+  audit: Audit[];
+  admins: AdminAssignment[];
+  applications: InstalledApplication[];
+  softwareCommands: SoftwareCommand[];
+  workOrders: WorkOrder[];
+  assetEvents: AssetEvent[];
+  executions: LifecycleExecution[];
+  executionSteps: ExecutionStep[];
+  accessAssignments: AccessAssignment[];
+};
 type ApiResult = { status?: string; message?: string; detail?: string; detalhe?: string; logs?: string[] };
 
-const emptyOverview: Overview = { users: [], profiles: [], tools: [], notebooks: [], requests: [], campaigns: [], connectors: [], riskFindings: [], audit: [], admins: [], applications: [], softwareCommands: [], workOrders: [], assetEvents: [], executions: [], executionSteps: [], accessAssignments: [] };
+type Tab = "overview" | "people" | "profiles" | "lifecycle" | "requests" | "integrations" | "workspace";
+type DrawerMode = "person" | "profile" | "request" | "campaign" | "admin" | "notebook" | "movement" | null;
+type PendingFilter = "mine" | "all" | "overdue" | "unassigned" | "failures" | "approvals";
+
+const emptyOverview: Overview = {
+  users: [],
+  profiles: [],
+  tools: [],
+  notebooks: [],
+  requests: [],
+  campaigns: [],
+  connectors: [],
+  riskFindings: [],
+  audit: [],
+  admins: [],
+  applications: [],
+  softwareCommands: [],
+  workOrders: [],
+  assetEvents: [],
+  executions: [],
+  executionSteps: [],
+  accessAssignments: [],
+};
+
+const dateTimeFormatter = new Intl.DateTimeFormat("pt-BR", {
+  dateStyle: "short",
+  timeStyle: "short",
+});
+
+function normalize(value: string | null | undefined) {
+  return (value ?? "").toLowerCase();
+}
+
+function matchesQuery(value: string | undefined, query: string) {
+  if (!query) return true;
+  return normalize(value).includes(normalize(query));
+}
+
+function parsePipeList(value: string | null | undefined) {
+  return (value || "")
+    .split("|||")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function formatDate(value?: string) {
+  if (!value) return "Sem prazo";
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) return value;
+  return new Date(parsed).toLocaleDateString("pt-BR");
+}
+
+function formatDateTime(value?: string) {
+  if (!value) return "Sem data";
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) return value;
+  return dateTimeFormatter.format(new Date(parsed));
+}
+
+function isOverdue(value?: string) {
+  if (!value) return false;
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) return false;
+  return parsed < Date.now();
+}
+
+function statusTone(value: string) {
+  const normalized = value.toLowerCase();
+  if (["verified", "completed", "active", "healthy", "configured", "ready"].includes(normalized)) return "success";
+  if (["failed", "rejected", "suspended", "critical", "overdue", "partial"].includes(normalized)) return "danger";
+  if (["running", "pending", "queued", "simulated", "planned", "in_progress"].includes(normalized)) return "info";
+  if (["waiting", "attention", "unassigned", "degraded"].includes(normalized)) return "warning";
+  return "neutral";
+}
+
+function statusLabel(value: string) {
+  const labels: Record<string, string> = {
+    active: "Ativo",
+    onboarding: "Em onboarding",
+    offboarding: "Em desligamento",
+    suspended: "Suspenso",
+    available: "Em estoque",
+    preparing: "Em preparação",
+    ready: "Pronto",
+    assigned: "Em uso",
+    in_transit: "Em transporte",
+    return_requested: "Devolução solicitada",
+    inspection: "Em conferência",
+    sanitizing: "Em higienização",
+    maintenance: "Em manutenção",
+    lost: "Extraviado",
+    pending: "Pendente",
+    approved: "Aprovado",
+    rejected: "Rejeitado",
+    running: "Em andamento",
+    completed: "Concluído",
+    partial: "Parcial",
+    queued: "Na fila",
+    catalog_only: "Somente catálogo",
+    simulated: "Modo simulado",
+    configured: "Configurado",
+    healthy: "Saudável",
+    degraded: "Com falha",
+    failed: "Com falha",
+    verified: "Verificado",
+    warning: "Aguardando",
+  };
+  const key = value.toLowerCase();
+  return labels[key] || key.replaceAll("_", " ");
+}
+
+function statusClass(value: string) {
+  const tone = statusTone(value);
+  return `badge badge-${tone}`;
+}
+
+function toneClass(value: string) {
+  const tone = statusTone(value);
+  return `pill pill-${tone}`;
+}
+
+function progressPercent(done: number, total: number) {
+  if (!total) return 0;
+  return Math.max(0, Math.min(100, Math.round((done / total) * 100)));
+}
+
+function initials(value: string) {
+  return value
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("");
+}
+
+function MetricButton({
+  value,
+  label,
+  tone,
+  onClick,
+}: {
+  value: string | number;
+  label: string;
+  tone: "neutral" | "info" | "warning" | "danger" | "success";
+  onClick?: () => void;
+}) {
+  return (
+    <button className={`metricCard metricCard-${tone}`} type="button" onClick={onClick}>
+      <strong>{value}</strong>
+      <span>{label}</span>
+    </button>
+  );
+}
+
+function DrawerField({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <label className="field">
+      <span>{label}</span>
+      {children}
+    </label>
+  );
+}
 
 export default function Dashboard({ admin }: { admin: AdminUser }) {
   const [data, setData] = useState<Overview>(emptyOverview);
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<ApiResult | null>(null);
-  const [selectedTools, setSelectedTools] = useState<number[]>([]);
-  const [tab, setTab] = useState<"people" | "profiles" | "lifecycle" | "inventory" | "applications" | "governance">("people");
-  const [activeDialog, setActiveDialog] = useState<"people" | "profiles" | "inventory" | "applications" | "governance" | null>(null);
+  const [tab, setTab] = useState<Tab>("overview");
+  const [drawerMode, setDrawerMode] = useState<DrawerMode>(null);
+  const [selectedPersonId, setSelectedPersonId] = useState<number | null>(null);
+  const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
+  const [selectedExecutionId, setSelectedExecutionId] = useState<number | null>(null);
   const [pendingOffboard, setPendingOffboard] = useState<string | null>(null);
+  const [pendingFilter, setPendingFilter] = useState<PendingFilter>("all");
+  const [search, setSearch] = useState("");
 
-  const load = useCallback(async () => {
+  async function load() {
     const response = await fetch("/api/v1/overview");
-    if (response.ok) setData(await response.json() as Overview);
+    if (response.ok) {
+      setData((await response.json()) as Overview);
+    }
+  }
+
+  useEffect(() => {
+    load().catch(() => undefined);
   }, []);
 
   useEffect(() => {
-    fetch("/api/v1/overview")
-      .then((response) => response.ok ? response.json() as Promise<Overview> : emptyOverview)
-      .then(setData)
-      .catch(() => undefined);
-  }, []);
+    if (!data.users.length) return;
+    if (!selectedPersonId || !data.users.some((item) => item.id === selectedPersonId)) {
+      setSelectedPersonId(data.users[0].id);
+    }
+  }, [data.users, selectedPersonId]);
+
+  useEffect(() => {
+    if (!data.profiles.length) return;
+    if (!selectedProfileId || !data.profiles.some((item) => item.id === selectedProfileId)) {
+      setSelectedProfileId(data.profiles[0].id);
+    }
+  }, [data.profiles, selectedProfileId]);
+
+  useEffect(() => {
+    if (!data.executions.length) return;
+    if (!selectedExecutionId || !data.executions.some((item) => item.id === selectedExecutionId)) {
+      setSelectedExecutionId(data.executions[0].id);
+    }
+  }, [data.executions, selectedExecutionId]);
 
   async function submit(path: string, body: object, action: string) {
     setBusy(action);
     setNotice(null);
     try {
-      const response = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-      const result = await response.json() as ApiResult;
+      const response = await fetch(path, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const result = (await response.json()) as ApiResult;
       setNotice(result);
       if (response.ok) await load();
       return response.ok;
     } catch {
-      setNotice({ detail: "Não foi possível conectar ao motor do Guardião." });
+      setNotice({ detail: "Nao foi possivel conectar ao motor do Guardiao." });
       return false;
     } finally {
       setBusy(null);
     }
   }
 
+  async function createPerson(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const ok = await submit(
+      "/api/v1/onboarding",
+      {
+        name: form.get("name"),
+        email: form.get("email"),
+        profile_id: form.get("profile_id"),
+        notebook_id: form.get("notebook_id") || null,
+      },
+      "person",
+    );
+    if (ok) {
+      event.currentTarget.reset();
+      setDrawerMode(null);
+      setTab("people");
+    }
+  }
+
   async function createProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const formElement = event.currentTarget;
-    const form = new FormData(formElement);
-    const ok = await submit("/api/v1/profiles", {
-      name: form.get("name"), description: form.get("description"), color: form.get("color"),
-      role: form.get("role"), scope: form.get("scope"), tool_ids: selectedTools,
-    }, "profile");
-    if (ok) { formElement.reset(); setSelectedTools([]); setActiveDialog(null); }
+    const form = new FormData(event.currentTarget);
+    const ok = await submit(
+      "/api/v1/profiles",
+      {
+        name: form.get("name"),
+        description: form.get("description"),
+        color: form.get("color"),
+        role: form.get("role"),
+        scope: form.get("scope"),
+        tool_ids: form.getAll("tool_ids").map((value) => Number(value)),
+      },
+      "profile",
+    );
+    if (ok) {
+      event.currentTarget.reset();
+      setDrawerMode(null);
+      setTab("profiles");
+    }
+  }
+
+  async function requestAccess(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const ok = await submit(
+      "/api/v1/access-requests",
+      {
+        user_id: form.get("user_id"),
+        tool_id: form.get("tool_id"),
+        requested_role: form.get("requested_role"),
+        justification: form.get("justification"),
+        expires_at: form.get("expires_at"),
+      },
+      "request",
+    );
+    if (ok) {
+      event.currentTarget.reset();
+      setDrawerMode(null);
+      setTab("requests");
+    }
+  }
+
+  async function createCampaign(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const ok = await submit(
+      "/api/v1/recertifications",
+      { name: form.get("name"), due_at: form.get("due_at") },
+      "campaign",
+    );
+    if (ok) {
+      event.currentTarget.reset();
+      setDrawerMode(null);
+      setTab("requests");
+    }
+  }
+
+  async function assignAdmin(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const ok = await submit(
+      "/api/v1/admin-assignments",
+      { email: form.get("email"), role: form.get("role") },
+      "admin",
+    );
+    if (ok) {
+      event.currentTarget.reset();
+      setDrawerMode(null);
+    }
   }
 
   async function addNotebook(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const formElement = event.currentTarget;
-    const form = new FormData(formElement);
-    const ok = await submit("/api/v1/notebooks", {
-      asset_tag: form.get("asset_tag"), serial: form.get("serial"), model: form.get("model"),
-      condition: form.get("condition"), location: form.get("location"), warranty_until: form.get("warranty_until"),
-      encrypted: form.get("encrypted") === "on",
-    }, "notebook");
-    if (ok) { formElement.reset(); setActiveDialog(null); }
+    const form = new FormData(event.currentTarget);
+    const ok = await submit(
+      "/api/v1/notebooks",
+      {
+        asset_tag: form.get("asset_tag"),
+        serial: form.get("serial"),
+        model: form.get("model"),
+        condition: form.get("condition"),
+        location: form.get("location"),
+        warranty_until: form.get("warranty_until"),
+        encrypted: form.get("encrypted") === "on",
+      },
+      "notebook",
+    );
+    if (ok) {
+      event.currentTarget.reset();
+      setDrawerMode(null);
+      setTab("workspace");
+    }
   }
 
-  async function onboarding(event: FormEvent<HTMLFormElement>) {
+  async function moveAsset(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const formElement = event.currentTarget;
-    const form = new FormData(formElement);
-    const ok = await submit("/api/v1/onboarding", {
-      name: form.get("name"), email: form.get("email"), profile_id: form.get("profile_id"), notebook_id: form.get("notebook_id"),
-    }, "onboarding");
-    if (ok) { formElement.reset(); setActiveDialog(null); }
+    const form = new FormData(event.currentTarget);
+    const ok = await submit(
+      "/api/v1/asset-lifecycle",
+      {
+        notebook_id: form.get("notebook_id"),
+        action: form.get("action"),
+        notes: form.get("notes"),
+        assignee: form.get("assignee"),
+        due_at: form.get("due_at"),
+        location: form.get("location"),
+        delivery_method: form.get("delivery_method"),
+        tracking_code: form.get("tracking_code"),
+        accessories: form.get("accessories"),
+        maintenance_type: form.get("maintenance_type"),
+        confirm_physical: form.get("confirm_physical") === "on",
+        confirm_wipe: form.get("confirm_wipe") === "on",
+        confirm_tests: form.get("confirm_tests") === "on",
+      },
+      "movement",
+    );
+    if (ok) {
+      event.currentTarget.reset();
+      setDrawerMode(null);
+      setTab("workspace");
+    }
   }
 
   async function offboard(email: string) {
@@ -101,59 +574,21 @@ export default function Dashboard({ admin }: { admin: AdminUser }) {
     if (ok) setPendingOffboard(null);
   }
 
-  async function requestAccess(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); const formElement = event.currentTarget; const form = new FormData(formElement);
-    const ok = await submit("/api/v1/access-requests", { user_id: form.get("user_id"), tool_id: form.get("tool_id"), requested_role: form.get("requested_role"), justification: form.get("justification"), expires_at: form.get("expires_at") }, "access-request");
-    if (ok) { formElement.reset(); setActiveDialog(null); }
-  }
-
-  async function createCampaign(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); const formElement = event.currentTarget; const form = new FormData(formElement);
-    const ok = await submit("/api/v1/recertifications", { name: form.get("name"), due_at: form.get("due_at") }, "campaign");
-    if (ok) { formElement.reset(); setActiveDialog(null); }
-  }
-
-  async function assignAdmin(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); const formElement = event.currentTarget; const form = new FormData(formElement);
-    const ok = await submit("/api/v1/admin-assignments", { email: form.get("email"), role: form.get("role") }, "admin");
-    if (ok) formElement.reset();
-  }
-
-  async function manageSoftware(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); const formElement = event.currentTarget; const form = new FormData(formElement);
-    const action = String(form.get("action"));
-    const ok = await submit("/api/v1/software-commands", {
-      notebook_id: form.get("notebook_id"), action, application_name: form.get("application_name"),
-      target_version: form.get("target_version"), justification: form.get("justification"),
-      confirm_uninstall: action !== "uninstall" || form.get("confirm_uninstall") === "on",
-    }, "software-command");
-    if (ok) formElement.reset();
-  }
-
-  async function moveAsset(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); const formElement = event.currentTarget; const form = new FormData(formElement);
-    const ok = await submit("/api/v1/asset-lifecycle", {
-      notebook_id: form.get("notebook_id"), action: form.get("action"), notes: form.get("notes"),
-      assignee: form.get("assignee"), due_at: form.get("due_at"), location: form.get("location"),
-      delivery_method: form.get("delivery_method"), tracking_code: form.get("tracking_code"),
-      accessories: form.get("accessories"), maintenance_type: form.get("maintenance_type"),
-      confirm_physical: form.get("confirm_physical") === "on", confirm_wipe: form.get("confirm_wipe") === "on",
-      confirm_tests: form.get("confirm_tests") === "on",
-    }, "asset-lifecycle");
-    if (ok) formElement.reset();
-  }
-
   async function updateExecutionStep(event: FormEvent<HTMLFormElement>, stepId: number) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
     const action = (submitter?.value || "complete_manual") as "complete_manual" | "mark_failed" | "retry";
-    await submit("/api/v1/execution-steps", {
-      step_id: stepId,
-      action,
-      evidence: form.get("evidence"),
-      error: form.get("error"),
-    }, `step-${stepId}`);
+    await submit(
+      "/api/v1/execution-steps",
+      {
+        step_id: stepId,
+        action,
+        evidence: form.get("evidence"),
+        error: form.get("error"),
+      },
+      `step-${stepId}`,
+    );
   }
 
   function toggleTheme() {
@@ -162,262 +597,1723 @@ export default function Dashboard({ admin }: { admin: AdminUser }) {
     localStorage.setItem("guardiao-theme", next);
   }
 
-  const available = data.notebooks.filter((notebook) => notebook.status === "available");
-  const activeUsers = data.users.filter((user) => user.status === "active");
-  const statusLabels: Record<string, string> = {
-    available: "Em estoque", preparing: "Em preparação", ready: "Pronto para entrega",
-    in_transit: "Em transporte", assigned: "Em uso", return_requested: "Devolução solicitada",
-    inspection: "Em conferência", sanitizing: "Em higienização", maintenance: "Em manutenção",
-    lost: "Extraviado",
+  const visibleQuery = search.trim();
+  const visibleUsers = data.users.filter(
+    (item) =>
+      matchesQuery(item.name, visibleQuery) ||
+      matchesQuery(item.email, visibleQuery) ||
+      matchesQuery(item.profile_name, visibleQuery) ||
+      matchesQuery(item.status, visibleQuery),
+  );
+  const visibleProfiles = data.profiles.filter(
+    (item) =>
+      matchesQuery(item.name, visibleQuery) ||
+      matchesQuery(item.description, visibleQuery) ||
+      matchesQuery(item.tool_names ?? "", visibleQuery),
+  );
+  const visibleExecutions = data.executions.filter(
+    (item) =>
+      matchesQuery(item.user_name, visibleQuery) ||
+      matchesQuery(item.email, visibleQuery) ||
+      matchesQuery(item.execution_type, visibleQuery) ||
+      matchesQuery(item.status, visibleQuery),
+  );
+  const visibleRequests = data.requests.filter(
+    (item) =>
+      matchesQuery(item.user_name, visibleQuery) ||
+      matchesQuery(item.email, visibleQuery) ||
+      matchesQuery(item.tool_name, visibleQuery) ||
+      matchesQuery(item.status, visibleQuery),
+  );
+  const visibleNotebooks = data.notebooks.filter(
+    (item) =>
+      matchesQuery(item.asset_tag, visibleQuery) ||
+      matchesQuery(item.serial, visibleQuery) ||
+      matchesQuery(item.model, visibleQuery) ||
+      matchesQuery(item.status, visibleQuery),
+  );
+  const visibleConnectors = data.connectors.filter(
+    (item) =>
+      matchesQuery(item.name, visibleQuery) ||
+      matchesQuery(item.category, visibleQuery) ||
+      matchesQuery(item.status, visibleQuery) ||
+      matchesQuery(item.auth_type, visibleQuery),
+  );
+  const visibleCommands = data.softwareCommands.filter(
+    (item) =>
+      matchesQuery(item.application_name, visibleQuery) ||
+      matchesQuery(item.asset_tag, visibleQuery) ||
+      matchesQuery(item.requested_by, visibleQuery) ||
+      matchesQuery(item.status, visibleQuery),
+  );
+  const visibleWorkOrders = data.workOrders.filter(
+    (item) =>
+      matchesQuery(item.asset_tag, visibleQuery) ||
+      matchesQuery(item.model, visibleQuery) ||
+      matchesQuery(item.status, visibleQuery) ||
+      matchesQuery(item.order_type, visibleQuery),
+  );
+
+  useEffect(() => {
+    if (tab === "people" && visibleUsers.length && !visibleUsers.some((item) => item.id === selectedPersonId)) {
+      setSelectedPersonId(visibleUsers[0].id);
+    }
+    if (tab === "profiles" && visibleProfiles.length && !visibleProfiles.some((item) => item.id === selectedProfileId)) {
+      setSelectedProfileId(visibleProfiles[0].id);
+    }
+    if (tab === "lifecycle" && visibleExecutions.length && !visibleExecutions.some((item) => item.id === selectedExecutionId)) {
+      setSelectedExecutionId(visibleExecutions[0].id);
+    }
+  }, [tab, visibleUsers, visibleProfiles, visibleExecutions, selectedPersonId, selectedProfileId, selectedExecutionId]);
+
+  const pageUser = admin.displayName.split(" ")[0] || admin.displayName;
+  const onboardingRuns = data.executions.filter((item) => item.execution_type === "ONBOARDING" && item.status === "RUNNING").length;
+  const offboardingRuns = data.executions.filter((item) => item.execution_type === "OFFBOARDING" && item.status === "RUNNING").length;
+  const delayedSteps = data.executionSteps.filter((item) => item.status !== "VERIFIED" && isOverdue(item.due_at)).length;
+  const unverifiedAssignments = data.accessAssignments.filter((item) => item.verification_status !== "VERIFIED").length;
+  const verifiedAssignments = data.accessAssignments.filter((item) => item.verification_status === "VERIFIED").length;
+  const openRequests = data.requests.filter((item) => item.status === "pending").length;
+  const openWorkOrders = data.workOrders.filter((item) => item.status === "open").length;
+  const openRisks = data.riskFindings.filter((item) => item.severity === "high").length;
+  const selectedPerson = data.users.find((item) => item.id === selectedPersonId) || visibleUsers[0];
+  const selectedProfile = data.profiles.find((item) => item.id === selectedProfileId) || visibleProfiles[0];
+  const selectedExecution = data.executions.find((item) => item.id === selectedExecutionId) || visibleExecutions[0];
+  const selectedExecutionSteps = data.executionSteps.filter((item) => item.execution_id === selectedExecution?.id);
+  const selectedAssignments = data.accessAssignments.filter((item) => item.user_id === selectedPerson?.id);
+  const selectedPersonExecutions = data.executions.filter((item) => item.user_id === selectedPerson?.id);
+  const selectedProfileTools = parsePipeList(selectedProfile?.tool_names);
+  const selectedProfileEntitlements = parsePipeList(selectedProfile?.entitlements);
+  const recentExecutions = visibleExecutions.slice(0, 6);
+  const priorities = [
+    ...data.executionSteps
+      .filter((item) => item.status !== "VERIFIED" && isOverdue(item.due_at))
+      .slice(0, 2)
+      .map((item) => ({
+        title: `${item.tool_name || item.label} de ${item.user_name} está atrasado`,
+        detail: item.assignee ? `Responsável: ${item.assignee}` : "Sem responsável definido",
+        action: "Atrasado",
+      })),
+    ...data.requests
+      .filter((item) => item.status === "pending")
+      .slice(0, 2)
+      .map((item) => ({
+        title: `${item.tool_name} para ${item.user_name} aguarda decisão`,
+        detail: `${item.requested_role} · ${item.justification}`,
+        action: "Pendente",
+      })),
+    ...data.workOrders
+      .filter((item) => item.status === "open")
+      .slice(0, 2)
+      .map((item) => ({
+        title: `${item.asset_tag} aguarda ${item.order_type.replaceAll("_", " ")}`,
+        detail: `${item.assignee} · ${item.due_at ? `prazo ${item.due_at}` : "sem prazo"}`,
+        action: "Físico",
+      })),
+  ].slice(0, 4);
+
+  const shellTitle: Record<Tab, { eyebrow: string; title: string; description: string; action?: { label: string; drawer: DrawerMode } }> = {
+    overview: {
+      eyebrow: "Visão geral",
+      title: "Controle simples para admissões, mudanças e desligamentos",
+      description: "O que precisa de atenção hoje, sem linguagem de console enterprise e sem excesso de ruído visual.",
+    },
+    people: {
+      eyebrow: "Pessoas",
+      title: "Identidades, perfis e estado atual dos acessos",
+      description: "A pessoa fica no centro. O notebook e o software aparecem como recursos associados, não como identidade.",
+      action: { label: "Nova pessoa", drawer: "person" },
+    },
+    profiles: {
+      eyebrow: "Perfis",
+      title: "Perfis por área, com matriz de acesso clara",
+      description: "Permissões previsíveis, ferramentas esperadas e exceções visíveis sem espalhar a informação pela interface.",
+      action: { label: "Novo perfil", drawer: "profile" },
+    },
+    lifecycle: {
+      eyebrow: "Lifecycle",
+      title: "Execuções verificáveis em linha do tempo",
+      description: "Cada etapa mostra ferramenta, método, responsável, prazo, evidência e resultado observado.",
+    },
+    requests: {
+      eyebrow: "Pendências",
+      title: "Fila operacional de aprovações e pendências",
+      description: "O que está parado, o que depende de evidência e o que precisa de decisão aparece no mesmo lugar.",
+      action: { label: "Nova solicitação", drawer: "request" },
+    },
+    integrations: {
+      eyebrow: "Integrações",
+      title: "Catálogo, simulação e integração real não são a mesma coisa",
+      description: "O estado do conector fica explícito para evitar prometer automação onde ainda existe apenas catálogo.",
+    },
+    workspace: {
+      eyebrow: "Workspace",
+      title: "Recursos associados à pessoa, sem virar a identidade",
+      description: "Dispositivos, custódia, software e manutenção aparecem como expansão operacional.",
+      action: { label: "Adicionar notebook", drawer: "notebook" },
+    },
   };
-  const moduleMeta = {
-    people: { eyebrow: "Lifecycle / Pessoas", title: "Pessoas", highlight: "e acessos", copy: "Identidades independentes do equipamento, com perfil e estado de acesso conhecidos.", action: "Nova admissão", target: "people-action" },
-    profiles: { eyebrow: "Identidades / Acessos", title: "Perfis", highlight: "e permissões", copy: "Perfis por área, menor privilégio e concessões previsíveis desde o primeiro dia.", action: "Novo perfil", target: "profiles-action" },
-    lifecycle: { eyebrow: "Lifecycle / Execuções", title: "Lifecycle", highlight: "verificável", copy: "Onboarding e offboarding decompostos por ferramenta, responsável, método e evidência.", action: null, target: "" },
-    inventory: { eyebrow: "Expansão / Workspace", title: "Workspace", highlight: "e dispositivos", copy: "Recursos opcionais associados à pessoa: notebooks, custódia, manutenção e software.", action: "Adicionar ativo", target: "inventory-action" },
-    applications: { eyebrow: "Lifecycle / Integrações", title: "Integrações", highlight: "e catálogo", copy: "Conectores catalogados e simulações claramente separados de integrações reais.", action: "Nova execução", target: "applications-action" },
-    governance: { eyebrow: "Controle / Pendências", title: "Pendências", highlight: "e evidências", copy: "Aprovações, riscos, recertificações e histórico auditável em uma fila operacional.", action: "Solicitar acesso", target: "governance-action" },
-  }[tab];
+
+  const current = shellTitle[tab];
+
+  function openDrawer(next: DrawerMode) {
+    setDrawerMode(next);
+  }
+
+  function renderDrawer() {
+    if (!drawerMode) return null;
+    const drawerHeader = {
+      person: ["Nova pessoa", "Criar identidade e gerar um plano de onboarding sem exigir notebook."],
+      profile: ["Novo perfil", "Definir acesso esperado, escopo e ferramentas da área."],
+      request: ["Nova solicitação", "Abrir uma exceção ou revisão com prazo e justificativa."],
+      campaign: ["Nova recertificação", "Iniciar uma revisão periódica com prazo definido."],
+      admin: ["Novo administrador", "Atribuir uma função administrativa com escopo claro."],
+      notebook: ["Novo notebook", "Cadastrar um ativo para estoque, custódia e entrega."],
+      movement: ["Movimentação de notebook", "Registrar entrega, retorno, manutenção ou preparação."],
+    }[drawerMode];
+
+    return (
+      <>
+        <button className="drawerBackdrop" type="button" aria-label="Fechar painel" onClick={() => setDrawerMode(null)} />
+        <aside className="drawerPanel" role="dialog" aria-modal="true" aria-label={drawerHeader[0]}>
+          <div className="drawerHeader">
+            <div>
+              <p>{drawerHeader[0]}</p>
+              <h3>{drawerHeader[1]}</h3>
+            </div>
+            <button type="button" className="drawerClose" onClick={() => setDrawerMode(null)} aria-label="Fechar">
+              ×
+            </button>
+          </div>
+
+          <div className="drawerBody">
+            {drawerMode === "person" && (
+              <form onSubmit={createPerson} className="drawerForm">
+                <DrawerField label="Nome completo">
+                  <input name="name" placeholder="Marina Costa" required />
+                </DrawerField>
+                <DrawerField label="E-mail corporativo">
+                  <input name="email" type="email" placeholder="marina@empresa.com" required />
+                </DrawerField>
+                <DrawerField label="Perfil da área">
+                  <select name="profile_id" required defaultValue="">
+                    <option value="" disabled>
+                      Selecione o perfil
+                    </option>
+                    {data.profiles.map((profile) => (
+                      <option key={profile.id} value={profile.id}>
+                        {profile.name}
+                      </option>
+                    ))}
+                  </select>
+                </DrawerField>
+                <DrawerField label="Workspace ou notebook (opcional)">
+                  <select name="notebook_id" defaultValue="">
+                    <option value="">Sem equipamento vinculado</option>
+                    {visibleNotebooks
+                      .filter((item) => item.status === "available")
+                      .map((notebook) => (
+                        <option key={notebook.id} value={notebook.id}>
+                          {notebook.asset_tag} · {notebook.model}
+                        </option>
+                      ))}
+                  </select>
+                </DrawerField>
+                <button className="primary" type="submit" disabled={busy !== null}>
+                  {busy === "person" ? "Criando plano..." : "Criar plano de onboarding"}
+                </button>
+              </form>
+            )}
+
+            {drawerMode === "profile" && (
+              <form onSubmit={createProfile} className="drawerForm">
+                <DrawerField label="Nome do perfil">
+                  <input name="name" placeholder="Financeiro" required />
+                </DrawerField>
+                <DrawerField label="Descrição">
+                  <textarea name="description" rows={3} placeholder="Acesso base, exceções e escopo da área." required />
+                </DrawerField>
+                <div className="drawerGrid">
+                  <DrawerField label="Cor">
+                    <input name="color" type="text" placeholder="#2457D6" />
+                  </DrawerField>
+                  <DrawerField label="Papel">
+                    <select name="role" defaultValue="">
+                      <option value="">Selecione</option>
+                      <option value="operacional">Operacional</option>
+                      <option value="gerencial">Gerencial</option>
+                      <option value="auditoria">Auditoria</option>
+                    </select>
+                  </DrawerField>
+                </div>
+                <DrawerField label="Escopo">
+                  <input name="scope" placeholder="Departamento, unidade ou unidade de negócio" />
+                </DrawerField>
+                <DrawerField label="Ferramentas">
+                  <div className="checkGrid">
+                    {data.tools.map((tool) => (
+                      <label className="checkCard" key={tool.id}>
+                        <input type="checkbox" name="tool_ids" value={tool.id} />
+                        <span>
+                          <strong>{tool.name}</strong>
+                          <small>{tool.category}</small>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </DrawerField>
+                <button className="primary" type="submit" disabled={busy !== null}>
+                  {busy === "profile" ? "Salvando..." : "Salvar perfil"}
+                </button>
+              </form>
+            )}
+
+            {drawerMode === "request" && (
+              <form onSubmit={requestAccess} className="drawerForm">
+                <DrawerField label="Colaborador">
+                  <select name="user_id" required defaultValue="">
+                    <option value="" disabled>
+                      Selecione
+                    </option>
+                    {data.users.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name}
+                      </option>
+                    ))}
+                  </select>
+                </DrawerField>
+                <DrawerField label="Ferramenta">
+                  <select name="tool_id" required defaultValue="">
+                    <option value="" disabled>
+                      Selecione
+                    </option>
+                    {data.tools.map((tool) => (
+                      <option key={tool.id} value={tool.id}>
+                        {tool.name}
+                      </option>
+                    ))}
+                  </select>
+                </DrawerField>
+                <div className="drawerGrid">
+                  <DrawerField label="Papel">
+                    <select name="requested_role" defaultValue="Leitor">
+                      <option>Leitor</option>
+                      <option>Operador</option>
+                      <option>Aprovador</option>
+                      <option>Administrador</option>
+                    </select>
+                  </DrawerField>
+                  <DrawerField label="Expira em">
+                    <input name="expires_at" type="date" />
+                  </DrawerField>
+                </div>
+                <DrawerField label="Justificativa">
+                  <textarea name="justification" rows={3} placeholder="Necessário para fechamento mensal." required />
+                </DrawerField>
+                <button className="primary" type="submit" disabled={busy !== null}>
+                  {busy === "request" ? "Enviando..." : "Enviar para aprovação"}
+                </button>
+              </form>
+            )}
+
+            {drawerMode === "campaign" && (
+              <form onSubmit={createCampaign} className="drawerForm">
+                <DrawerField label="Nome da campanha">
+                  <input name="name" placeholder="Revisão trimestral Q3" required />
+                </DrawerField>
+                <DrawerField label="Prazo">
+                  <input name="due_at" type="date" required />
+                </DrawerField>
+                <button className="primary" type="submit" disabled={busy !== null}>
+                  {busy === "campaign" ? "Criando..." : "Iniciar campanha"}
+                </button>
+              </form>
+            )}
+
+            {drawerMode === "admin" && (
+              <form onSubmit={assignAdmin} className="drawerForm">
+                <DrawerField label="E-mail">
+                  <input name="email" type="email" placeholder="gestor@empresa.com" required />
+                </DrawerField>
+                <DrawerField label="Função">
+                  <select name="role" defaultValue="Auditor">
+                    <option>Auditor</option>
+                    <option>Gestor de área</option>
+                    <option>Gestor de ativos</option>
+                    <option>Administrador IAM</option>
+                    <option>Superadministrador</option>
+                  </select>
+                </DrawerField>
+                <button className="primary" type="submit" disabled={busy !== null}>
+                  {busy === "admin" ? "Atribuindo..." : "Atribuir função"}
+                </button>
+              </form>
+            )}
+
+            {drawerMode === "notebook" && (
+              <form onSubmit={addNotebook} className="drawerForm">
+                <DrawerField label="Patrimônio">
+                  <input name="asset_tag" placeholder="NB-1024" required />
+                </DrawerField>
+                <DrawerField label="Serial">
+                  <input name="serial" placeholder="PF4X9K2" required />
+                </DrawerField>
+                <DrawerField label="Modelo">
+                  <input name="model" placeholder="Lenovo ThinkPad E14 Gen 6" required />
+                </DrawerField>
+                <div className="drawerGrid">
+                  <DrawerField label="Condição">
+                    <select name="condition" defaultValue="new">
+                      <option value="new">Novo</option>
+                      <option value="good">Bom estado</option>
+                      <option value="maintenance">Em manutenção</option>
+                    </select>
+                  </DrawerField>
+                  <DrawerField label="Localização">
+                    <input name="location" placeholder="Matriz · São Paulo" />
+                  </DrawerField>
+                </div>
+                <DrawerField label="Garantia até">
+                  <input name="warranty_until" type="date" />
+                </DrawerField>
+                <label className="checkCard checkCard-inline">
+                  <input name="encrypted" type="checkbox" />
+                  <span>
+                    <strong>Criptografia verificada</strong>
+                    <small>Marca o ativo como apto para custódia.</small>
+                  </span>
+                </label>
+                <button className="primary" type="submit" disabled={busy !== null}>
+                  {busy === "notebook" ? "Adicionando..." : "Adicionar notebook"}
+                </button>
+              </form>
+            )}
+
+            {drawerMode === "movement" && (
+              <form onSubmit={moveAsset} className="drawerForm">
+                <DrawerField label="Notebook">
+                  <select name="notebook_id" required defaultValue="">
+                    <option value="" disabled>
+                      Selecione o patrimônio
+                    </option>
+                    {data.notebooks.map((notebook) => (
+                      <option key={notebook.id} value={notebook.id}>
+                        {notebook.asset_tag} · {statusLabel(notebook.status)}
+                      </option>
+                    ))}
+                  </select>
+                </DrawerField>
+                <DrawerField label="Movimentação">
+                  <select name="action" required defaultValue="">
+                    <option value="" disabled>
+                      Selecione
+                    </option>
+                    <option value="start_preparation">Iniciar preparação</option>
+                    <option value="ready_for_delivery">Aprovar para entrega</option>
+                    <option value="dispatch">Despachar / entregar</option>
+                    <option value="confirm_delivery">Confirmar recebimento</option>
+                    <option value="request_return">Solicitar devolução</option>
+                    <option value="receive_return">Receber e conferir</option>
+                    <option value="start_sanitization">Higienizar e formatar</option>
+                    <option value="send_maintenance">Enviar para manutenção</option>
+                    <option value="schedule_preventive">Agendar preventiva</option>
+                    <option value="release_stock">Liberar para estoque</option>
+                    <option value="mark_lost">Marcar como extraviado</option>
+                  </select>
+                </DrawerField>
+                <DrawerField label="Responsável">
+                  <input name="assignee" placeholder="Equipe de TI" required />
+                </DrawerField>
+                <div className="drawerGrid">
+                  <DrawerField label="Prazo">
+                    <input name="due_at" type="date" />
+                  </DrawerField>
+                  <DrawerField label="Modalidade">
+                    <select name="delivery_method" defaultValue="Presencial">
+                      <option>Presencial</option>
+                      <option>Transportadora</option>
+                      <option>Logística reversa</option>
+                      <option>Assistência técnica</option>
+                    </select>
+                  </DrawerField>
+                </div>
+                <DrawerField label="Destino / local">
+                  <input name="location" placeholder="Matriz · São Paulo" />
+                </DrawerField>
+                <DrawerField label="Rastreio">
+                  <input name="tracking_code" placeholder="BR123456789" />
+                </DrawerField>
+                <DrawerField label="Acessórios sob custódia">
+                  <input name="accessories" placeholder="Carregador, mochila e mouse" />
+                </DrawerField>
+                <DrawerField label="Observações e evidências">
+                  <textarea name="notes" rows={3} placeholder="Estado físico, ocorrências e providências tomadas." required />
+                </DrawerField>
+                <div className="checkGrid">
+                  <label className="checkCard checkCard-inline">
+                    <input name="confirm_physical" type="checkbox" />
+                    <span>
+                      <strong>Inspeção física</strong>
+                      <small>Obrigatória para retorno ao estoque.</small>
+                    </span>
+                  </label>
+                  <label className="checkCard checkCard-inline">
+                    <input name="confirm_wipe" type="checkbox" />
+                    <span>
+                      <strong>Apagamento seguro</strong>
+                      <small>Valida limpeza e preparação.</small>
+                    </span>
+                  </label>
+                  <label className="checkCard checkCard-inline">
+                    <input name="confirm_tests" type="checkbox" />
+                    <span>
+                      <strong>Testes funcionais</strong>
+                      <small>Confirma prontidão operacional.</small>
+                    </span>
+                  </label>
+                </div>
+                <button className="primary" type="submit" disabled={busy !== null}>
+                  {busy === "movement" ? "Registrando..." : "Registrar movimentação"}
+                </button>
+              </form>
+            )}
+          </div>
+        </aside>
+      </>
+    );
+  }
+
+  const overviewMetrics = [
+    {
+      value: onboardingRuns,
+      label: "Onboardings em andamento",
+      tone: "info" as const,
+      onClick: () => setTab("lifecycle"),
+    },
+    {
+      value: offboardingRuns,
+      label: "Offboardings em andamento",
+      tone: "warning" as const,
+      onClick: () => setTab("lifecycle"),
+    },
+    {
+      value: delayedSteps,
+      label: "Etapas atrasadas",
+      tone: "danger" as const,
+      onClick: () => setTab("requests"),
+    },
+    {
+      value: unverifiedAssignments,
+      label: "Acessos sem verificação",
+      tone: "neutral" as const,
+      onClick: () => setTab("people"),
+    },
+  ];
 
   return (
-    <main>
-      <header className="topbar">
-        <div className="brandBlock"><a className="brand" href="#top" aria-label="Guardião — início"><span className="brandMark">G</span><span>Guardião</span></a><small>IDENTITY CONTROL PLANE</small></div>
-        <div className="headerActions">
-          <button className="themeToggle" type="button" onClick={toggleTheme} aria-label="Alternar tema"><span className="themeMoon">☾</span><span className="themeSun">☀</span> Tema</button>
-          <div className="adminMenu"><span className="adminAvatar">{admin.displayName[0]?.toUpperCase()}</span><div><small>Administrador</small><strong>{admin.displayName}</strong></div><a href="/signout-with-chatgpt?return_to=%2F">Sair</a></div>
+    <main className="appShell">
+      <aside className="sidebar">
+        <div className="sidebarBrand">
+          <span className="brandMark">G</span>
+          <div>
+            <strong>GUARDIÃO</strong>
+            <small>Controle de lifecycle de acessos</small>
+          </div>
         </div>
-      </header>
 
-      <section className="hero compactHero moduleHero" id="top">
-        <div className="pageIdentity"><p className="eyebrow">{moduleMeta.eyebrow}</p><h1>{moduleMeta.title} <em>{moduleMeta.highlight}</em></h1><p className="heroCopy">{moduleMeta.copy}</p></div>
-        <div className="pageActions"><span className="environmentState"><i /> Ambiente operacional</span>{moduleMeta.action && <button className="primary compactAction" type="button" onClick={() => setActiveDialog(tab as Exclude<typeof tab, "lifecycle">)}>+ {moduleMeta.action}</button>}</div>
-        <div className="statusCard">
-          <div className="pulse"><i /> POSTURA OPERACIONAL</div>
-          <div className="metric"><strong>{activeUsers.length}</strong><span>identidades ativas</span></div>
-          <div className="metric attention"><strong>{data.requests.filter((item) => item.status === "pending").length}</strong><span>decisões pendentes</span></div>
-          <div className="metric danger"><strong>{data.riskFindings.filter((item) => item.severity === "high").length}</strong><span>riscos altos</span></div>
-          <div className="metric"><strong>{available.length}</strong><span>ativos disponíveis</span></div>
+        <div className="sidebarSection">
+          <span className="sidebarLabel">Principal</span>
+          <nav className="navList" aria-label="Navegação principal">
+            <button className={`navItem ${tab === "overview" ? "active" : ""}`} onClick={() => setTab("overview")}>
+              <span>Visão geral</span>
+              <small>Painel de atenção</small>
+            </button>
+            <button className={`navItem ${tab === "people" ? "active" : ""}`} onClick={() => setTab("people")}>
+              <span>Pessoas</span>
+              <small>Identidades e estados</small>
+            </button>
+            <button className={`navItem ${tab === "profiles" ? "active" : ""}`} onClick={() => setTab("profiles")}>
+              <span>Perfis</span>
+              <small>Área, escopo e acesso</small>
+            </button>
+            <button className={`navItem ${tab === "lifecycle" ? "active" : ""}`} onClick={() => setTab("lifecycle")}>
+              <span>Lifecycle</span>
+              <small>Execuções verificáveis</small>
+            </button>
+            <button className={`navItem ${tab === "requests" ? "active" : ""}`} onClick={() => setTab("requests")}>
+              <span>Pendências</span>
+              <small>Aprovações e falhas</small>
+              <b>{openRequests + delayedSteps}</b>
+            </button>
+          </nav>
         </div>
-      </section>
 
-      {notice && <div className={`notice ${notice.detail ? "noticeDanger" : ""}`} role="status"><strong>{notice.message || notice.detail}</strong>{notice.detalhe && <span>{notice.detalhe}</span>}<button onClick={() => setNotice(null)} aria-label="Fechar">×</button></div>}
-      {pendingOffboard && <div className="confirmBar" role="alert">
-        <div><strong>Criar plano de desligamento?</strong><span>O Guardião criará etapas por ferramenta e, quando aplicável, a devolução do endpoint. Nenhuma revogação será declarada sem verificação.</span></div>
-        <div><button className="cancelAction" onClick={() => setPendingOffboard(null)}>Cancelar</button><button className="confirmAction" onClick={() => offboard(pendingOffboard)} disabled={busy !== null}>{busy ? "Criando plano…" : "Criar plano"}</button></div>
-      </div>}
+        <div className="sidebarSection">
+          <span className="sidebarLabel">Expansão</span>
+          <nav className="navList" aria-label="Expansões">
+            <button className={`navItem ${tab === "integrations" ? "active" : ""}`} onClick={() => setTab("integrations")}>
+              <span>Integrações</span>
+              <small>Catálogo e estado</small>
+            </button>
+            <button className={`navItem ${tab === "workspace" ? "active" : ""}`} onClick={() => setTab("workspace")}>
+              <span>Workspace</span>
+              <small>Dispositivos e custódia</small>
+            </button>
+          </nav>
+        </div>
 
-      <nav className="moduleTabs" aria-label="Módulos">
-        <p>PRINCIPAL</p>
-        <button className={tab === "people" ? "active" : ""} onClick={() => setTab("people")}><span className="navIcon">P</span><span><strong>Pessoas</strong><small>Identidades e acessos</small></span></button>
-        <button className={tab === "profiles" ? "active" : ""} onClick={() => setTab("profiles")}><span className="navIcon">R</span><span><strong>Perfis</strong><small>Ferramentas esperadas</small></span></button>
-        <button className={tab === "lifecycle" ? "active" : ""} onClick={() => setTab("lifecycle")}><span className="navIcon">L</span><span><strong>Lifecycle</strong><small>Execuções e etapas</small></span><b>{data.executionSteps.filter((item) => item.status !== "VERIFIED").length}</b></button>
-        <button className={tab === "governance" ? "active" : ""} onClick={() => setTab("governance")}><span className="navIcon">E</span><span><strong>Pendências</strong><small>Decisões e evidências</small></span><b>{data.requests.filter((item) => item.status === "pending").length}</b></button>
-        <p>EXPANSÃO</p>
-        <button className={tab === "applications" ? "active" : ""} onClick={() => setTab("applications")}><span className="navIcon">I</span><span><strong>Integrações</strong><small>Catálogo e software</small></span></button>
-        <button className={tab === "inventory" ? "active" : ""} onClick={() => setTab("inventory")}><span className="navIcon">W</span><span><strong>Workspace</strong><small>Dispositivos opcionais</small></span></button>
-      </nav>
+        <div className="sidebarFooter">
+          <span className="sidebarLabel">Atalho</span>
+          <button className="ghostButton" type="button" onClick={toggleTheme}>
+            Alternar tema
+          </button>
+          <button className="ghostButton" type="button" onClick={() => setSearch("")}>
+            Limpar busca
+          </button>
+        </div>
+      </aside>
 
-      {activeDialog && <button className="drawerBackdrop" type="button" onClick={() => setActiveDialog(null)} aria-label="Fechar painel" />}
-
-      {tab === "people" && <section className="module">
-        <div className={`panel onboardingPanel actionDrawer ${activeDialog === "people" ? "open" : ""}`} id="people-action">
-          <div className="panelHeading"><span className="step">01</span><div><p>ENTRADA DE COLABORADOR</p><h2>Provisionar por perfil</h2></div><button className="drawerClose" type="button" onClick={() => setActiveDialog(null)} aria-label="Fechar">×</button></div>
-          <p className="panelCopy">Ao selecionar o perfil, o Guardião cria um plano de provisionamento por ferramenta. O acesso só muda para verificado após evidência.</p>
-          <div className="flowRail"><span className="done">Identidade</span><i /><span>Perfil</span><i /><span>Notebook</span><i /><span>Acessos</span><i /><span>Concluído</span></div>
-          {data.profiles.length === 0 ? <div className="callout">Cadastre pelo menos um perfil antes de criar o plano de onboarding.</div> :
-          <form onSubmit={onboarding}>
-            <div className="formRow"><label>Nome completo<input name="name" placeholder="Marina Costa" required /></label><label>E-mail corporativo<input name="email" type="email" placeholder="marina@empresa.com" required /></label></div>
-            <div className="formRow"><label>Perfil da área<select name="profile_id" required defaultValue=""><option value="" disabled>Selecione o perfil</option>{data.profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name} · {(profile.tool_names || "").split("|||").filter(Boolean).length} ferramentas</option>)}</select></label>
-            <label>Workspace ou notebook (opcional)<select name="notebook_id" defaultValue=""><option value="">Sem equipamento vinculado</option>{available.map((notebook) => <option key={notebook.id} value={notebook.id}>{notebook.asset_tag} · {notebook.model}</option>)}</select></label></div>
-            <button className="primary" disabled={busy !== null}>{busy === "onboarding" ? "Criando plano…" : "Criar plano de onboarding"}<span>→</span></button>
-          </form>}
-        </div>
-        <div className="registry embedded">
-          <div className="registryHead"><div><p className="eyebrow">DIRETÓRIO</p><h2>Colaboradores</h2></div><span>{activeUsers.length} ativos</span></div>
-          {data.users.length === 0 ? <div className="empty">Nenhuma pessoa cadastrada.</div> : <div className="tableWrap"><table><thead><tr><th>Pessoa</th><th>Perfil</th><th>Workspace</th><th>Estado lifecycle</th><th /></tr></thead><tbody>{data.users.map((user) => <tr key={user.id}><td><strong>{user.name}</strong><small>{user.email}</small></td><td><span className="profileDot" style={{ background: user.profile_color || "#6d756f" }} />{user.profile_name || "Sem perfil"}</td><td>{user.asset_tag ? <><strong>{user.asset_tag}</strong><small>{user.model}</small></> : <span className="mutedValue">Sem equipamento</span>}</td><td><span className={`badge ${user.status}`}>{user.status === "active" ? "Ativo" : user.status === "onboarding" ? "Onboarding" : user.status === "offboarding" ? "Offboarding" : "Suspenso"}</span></td><td>{user.status === "active" && <button className="rowAction" disabled={busy !== null} onClick={() => setPendingOffboard(user.email)}>Desligar</button>}</td></tr>)}</tbody></table></div>}
-        </div>
-      </section>}
-
-      {tab === "profiles" && <section className="module twoColumns">
-        <div className={`panel actionDrawer ${activeDialog === "profiles" ? "open" : ""}`} id="profiles-action">
-          <div className="panelHeading"><span className="step">02</span><div><p>ROLE-BASED ACCESS</p><h2>Novo perfil de área</h2></div><button className="drawerClose" type="button" onClick={() => setActiveDialog(null)} aria-label="Fechar">×</button></div>
-          <form onSubmit={createProfile}>
-            <div className="formRow"><label>Nome do perfil<input name="name" placeholder="Financeiro" required /></label><label>Cor de identificação<input name="color" type="color" defaultValue="#0b6b4b" /></label></div>
-            <label>Descrição<input name="description" placeholder="Conciliação, contas a pagar e controladoria" required /></label>
-            <div className="formRow"><label>Papel padrão<select name="role"><option>Usuário</option><option>Operador</option><option>Aprovador</option><option>Administrador</option></select></label><label>Escopo<select name="scope"><option>Departamento</option><option>Filial</option><option>Projeto</option><option>Empresa</option></select></label></div>
-            <fieldset><legend>Ferramentas permitidas</legend><div className="toolPicker">{data.tools.map((tool) => <label className="checkCard" key={tool.id}><input type="checkbox" checked={selectedTools.includes(tool.id)} onChange={() => setSelectedTools((current) => current.includes(tool.id) ? current.filter((id) => id !== tool.id) : [...current, tool.id])} /><span><strong>{tool.name}</strong><small>{tool.category}</small></span></label>)}</div></fieldset>
-            <button className="primary" disabled={busy !== null || selectedTools.length === 0}>{busy === "profile" ? "Criando…" : "Salvar perfil de acesso"}<span>→</span></button>
-          </form>
-        </div>
-        <div className="profileList">
-          {data.profiles.length === 0 ? <div className="panel empty">Crie o primeiro perfil de área.</div> : data.profiles.map((profile) => <article className="profileCard" key={profile.id} style={{ borderTopColor: profile.color }}>
-            <div className="profileCardHead"><div><p className="eyebrow">PERFIL DE ACESSO</p><h3>{profile.name}</h3></div><strong>{profile.members}<small>pessoas</small></strong></div>
-            <p>{profile.description}</p><div className="chips">{(profile.entitlements || profile.tool_names || "").split("|||").filter(Boolean).map((item) => { const [tool, role, scope] = item.split("::"); return <span key={item}>{tool}{role && <small>{role} · {scope}</small>}</span>; })}</div>
-          </article>)}
-        </div>
-      </section>}
-
-      {tab === "lifecycle" && <section className="module lifecycleModule">
-        <div className="lifecycleStats">
-          <div><strong>{data.executions.filter((item) => item.status === "RUNNING").length}</strong><span>Em execução</span></div>
-          <div><strong>{data.executionSteps.filter((item) => ["PLANNED", "WAITING"].includes(item.status)).length}</strong><span>Etapas pendentes</span></div>
-          <div><strong>{data.executionSteps.filter((item) => item.status === "FAILED").length}</strong><span>Falhas abertas</span></div>
-          <div><strong>{data.executionSteps.filter((item) => item.status === "VERIFIED").length}</strong><span>Verificadas</span></div>
-        </div>
-        <div className="registry embedded">
-          <div className="registryHead"><div><p className="eyebrow">EXECUÇÕES</p><h2>Planos de lifecycle</h2></div><span>{data.executions.length} planos</span></div>
-          {data.executions.length === 0 ? <div className="empty">Crie um onboarding ou desligamento para gerar o primeiro plano.</div> :
-          <div className="executionList">{data.executions.map((execution) => <article key={execution.id} className="executionRow">
-            <div><span className={`executionType ${execution.execution_type.toLowerCase()}`}>{execution.execution_type}</span><strong>{execution.user_name}</strong><small>{execution.email}</small></div>
-            <div className="executionProgress"><span><b>{execution.verified_steps}</b> de {execution.total_steps} verificadas</span><i><em style={{ width: `${execution.total_steps ? (execution.verified_steps / execution.total_steps) * 100 : 0}%` }} /></i></div>
-            <span className={`executionStatus ${execution.status.toLowerCase()}`}>{execution.status}</span>
-          </article>)}</div>}
-        </div>
-        <div className="registry embedded">
-          <div className="registryHead"><div><p className="eyebrow">PLANO OPERACIONAL</p><h2>Etapas por ferramenta</h2></div><span>evidência individual</span></div>
-          {data.executionSteps.length === 0 ? <div className="empty">Nenhuma etapa pendente.</div> :
-          <div className="stepBoard">{data.executionSteps.map((step) => <article key={step.id} className={`executionStep ${step.status.toLowerCase()}`}>
-            <div className="stepMain"><span className={`methodTag ${step.method.toLowerCase()}`}>{step.method}</span><div><strong>{step.label}</strong><small>{step.user_name} · {step.assignee}</small></div><span className={`stepStatus ${step.status.toLowerCase()}`}>{step.status}</span></div>
-            {(step.result || step.error || step.evidence) && <div className="stepContext">{step.result && <span>{step.result}</span>}{step.error && <b>{step.error}</b>}{step.evidence && <small>Evidência: {step.evidence}</small>}</div>}
-            {step.status !== "VERIFIED" && <form className="stepActionForm" onSubmit={(event) => updateExecutionStep(event, step.id)}>
-              <input name="evidence" aria-label={`Evidência para ${step.label}`} placeholder="Evidência ou referência do chamado" />
-              <input name="error" aria-label={`Erro em ${step.label}`} placeholder="Erro encontrado, se houver" />
-              <button className="secondary" name="action" value="complete_manual" disabled={busy !== null}>Concluir manualmente</button>
-              <button className="rowAction" name="action" value="mark_failed" disabled={busy !== null}>Registrar falha</button>
-              {step.status === "FAILED" && <button className="rowAction" name="action" value="retry" disabled={busy !== null}>Replanejar</button>}
-            </form>}
-          </article>)}</div>}
-        </div>
-        <div className="registry embedded">
-          <div className="registryHead"><div><p className="eyebrow">INVENTÁRIO DE ACESSOS</p><h2>Esperado × observado</h2></div><span>{data.accessAssignments.length} atribuições</span></div>
-          {data.accessAssignments.length === 0 ? <div className="empty">Os acessos planejados aparecerão após um onboarding ou aprovação.</div> :
-          <div className="tableWrap"><table><thead><tr><th>Pessoa</th><th>Ferramenta</th><th>Conta</th><th>Esperado</th><th>Observado</th><th>Verificação</th></tr></thead><tbody>{data.accessAssignments.map((assignment) => <tr key={assignment.id}><td><strong>{assignment.user_name}</strong><small>{assignment.email}</small></td><td>{assignment.tool_name}</td><td>{assignment.account_identifier || "Planejada"}</td><td><span className="stateValue">{assignment.expected_state}</span></td><td><span className="stateValue observed">{assignment.observed_state}</span></td><td><span className={`verification ${assignment.verification_status}`}>{assignment.verification_status}</span><small>{assignment.last_verified_at ? new Date(assignment.last_verified_at).toLocaleString("pt-BR") : "Nunca verificado"}</small></td></tr>)}</tbody></table></div>}
-        </div>
-      </section>}
-
-      {tab === "inventory" && <section className="module twoColumns inventoryLayout">
-        <div className={`panel actionDrawer ${activeDialog === "inventory" ? "open" : ""}`} id="inventory-action">
-          <div className="panelHeading"><span className="step">03</span><div><p>ASSET MANAGEMENT</p><h2>Entrada no estoque</h2></div><button className="drawerClose" type="button" onClick={() => setActiveDialog(null)} aria-label="Fechar">×</button></div>
-          <form onSubmit={addNotebook}>
-            <div className="formRow"><label>Patrimônio<input name="asset_tag" placeholder="NTB-0042" required /></label><label>Número de série<input name="serial" placeholder="PF4X9K2" required /></label></div>
-            <label>Fabricante e modelo<input name="model" placeholder="Lenovo ThinkPad E14 Gen 6" required /></label>
-            <div className="formRow"><label>Condição<select name="condition"><option value="new">Novo</option><option value="good">Bom estado</option><option value="maintenance">Em manutenção</option></select></label><label>Localização<input name="location" placeholder="Matriz · São Paulo" /></label></div>
-            <div className="formRow"><label>Garantia até<input name="warranty_until" type="date" /></label><label className="inlineCheck"><input name="encrypted" type="checkbox" /> Criptografia verificada</label></div>
-            <button className="primary" disabled={busy !== null}>{busy === "notebook" ? "Adicionando…" : "Adicionar notebook"}<span>→</span></button>
-          </form>
-        </div>
-        <div className="inventorySummary">
-          <div><strong>{data.notebooks.length}</strong><span>Total</span></div><div><strong>{available.length}</strong><span>Em estoque</span></div><div><strong>{data.notebooks.filter((n) => n.status === "assigned").length}</strong><span>Em uso</span></div>
-        </div>
-        <div className="lifecycleWorkspace">
-          <div className="panel lifecycleControl">
-            <div className="panelHeading"><span className="step">C</span><div><p>CADEIA DE CUSTÓDIA</p><h2>Movimentar notebook</h2></div></div>
-            <p className="panelCopy">Registre cada passagem física. Um ativo devolvido somente retorna ao estoque após conferência, apagamento seguro e testes.</p>
-            <div className="lifecycleRail" aria-label="Ciclo patrimonial">
-              <span>Estoque</span><i /><span>Preparação</span><i /><span>Entrega</span><i /><span>Em uso</span><i /><span>Devolução</span><i /><span>Validação</span>
+      <div className="pageFrame">
+        <header className="topbar">
+          <div className="pageIdentity">
+            <span className="eyebrow">{current.eyebrow}</span>
+            <h1>{current.title}</h1>
+            <p>{current.description}</p>
+          </div>
+          <div className="topbarTools">
+            <label className="searchBox">
+              <span>Buscar</span>
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Pessoa, perfil, ferramenta, notebook..."
+              />
+            </label>
+            <div className="profileChip">
+              <span>{initials(admin.displayName)}</span>
+              <div>
+                <strong>{admin.displayName}</strong>
+                <small>{pageUser}</small>
+              </div>
             </div>
-            <form onSubmit={moveAsset}>
-              <div className="formRow"><label>Notebook<select name="notebook_id" required defaultValue=""><option value="" disabled>Selecione o patrimônio</option>{data.notebooks.map((notebook) => <option key={notebook.id} value={notebook.id}>{notebook.asset_tag} · {statusLabels[notebook.status] || notebook.status}</option>)}</select></label>
-              <label>Próxima etapa<select name="action" required defaultValue=""><option value="" disabled>Selecione a movimentação</option><option value="start_preparation">Iniciar preparação</option><option value="ready_for_delivery">Aprovar para entrega</option><option value="dispatch">Despachar / entregar</option><option value="confirm_delivery">Confirmar recebimento</option><option value="request_return">Solicitar devolução</option><option value="receive_return">Receber e conferir</option><option value="start_sanitization">Higienizar e formatar</option><option value="send_maintenance">Enviar para manutenção</option><option value="schedule_preventive">Agendar preventiva</option><option value="release_stock">Liberar para estoque</option><option value="mark_lost">Marcar como extraviado</option></select></label></div>
-              <div className="formRow"><label>Responsável<input name="assignee" placeholder="Equipe de TI" required /></label><label>Prazo / preventiva<input name="due_at" type="date" /></label></div>
-              <div className="formRow"><label>Local ou destino<input name="location" placeholder="Matriz · São Paulo" /></label><label>Modalidade<select name="delivery_method"><option>Presencial</option><option>Transportadora</option><option>Logística reversa</option><option>Assistência técnica</option></select></label></div>
-              <div className="formRow"><label>Rastreio<input name="tracking_code" placeholder="BR123456789" /></label><label>Tipo de manutenção<select name="maintenance_type"><option value="corrective_maintenance">Corretiva</option><option value="preventive_maintenance">Preventiva</option><option value="warranty">Garantia</option></select></label></div>
-              <label>Acessórios sob custódia<input name="accessories" placeholder="Carregador, mochila e mouse" /></label>
-              <label>Observações e evidências<input name="notes" placeholder="Estado físico, ocorrências e providências tomadas" required /></label>
-              <fieldset className="releaseChecklist"><legend>Validação obrigatória para retorno ao estoque</legend><div><label className="inlineCheck"><input name="confirm_physical" type="checkbox" /> Inspeção física</label><label className="inlineCheck"><input name="confirm_wipe" type="checkbox" /> Apagamento seguro</label><label className="inlineCheck"><input name="confirm_tests" type="checkbox" /> Testes funcionais</label></div></fieldset>
-              <button className="primary" disabled={busy !== null}>{busy === "asset-lifecycle" ? "Registrando etapa…" : "Registrar movimentação"}<span>→</span></button>
-            </form>
+            <button className="ghostButton" type="button" onClick={toggleTheme}>
+              Tema
+            </button>
+            <a className="ghostButton" href="/signout-with-chatgpt?return_to=%2F">
+              Sair
+            </a>
           </div>
-          <div className="workOrderPanel">
-            <div className="registryHead"><div><p className="eyebrow">ORDENS DE SERVIÇO</p><h2>Trabalho físico</h2></div><span>{data.workOrders.filter((order) => order.status === "open").length} abertas</span></div>
-            <div className="workOrderList">{data.workOrders.filter((order) => order.status === "open").length === 0 ? <div className="empty">Nenhuma ordem aberta.</div> : data.workOrders.filter((order) => order.status === "open").map((order) => <article key={order.id}>
-              <div><span className="workOrderType">{order.order_type.replaceAll("_", " ")}</span><strong>{order.asset_tag}</strong><small>{order.model}</small></div>
-              <p>{order.notes}</p>
-              <div className="workOrderMeta"><span>{order.assignee}</span><b>{order.due_at ? `até ${order.due_at}` : "sem prazo"}</b></div>
-            </article>)}</div>
-          </div>
-        </div>
-        <div className="registry embedded inventoryTable">
-          <div className="registryHead"><div><p className="eyebrow">INVENTÁRIO</p><h2>Notebooks</h2></div><span>{data.notebooks.length} ativos</span></div>
-          {data.notebooks.length === 0 ? <div className="empty">Nenhum notebook cadastrado.</div> : <div className="tableWrap"><table><thead><tr><th>Patrimônio</th><th>Equipamento</th><th>Custódia</th><th>Compliance</th><th>Estado físico</th><th>Próxima preventiva</th></tr></thead><tbody>{data.notebooks.map((notebook) => <tr key={notebook.id}><td><strong>{notebook.asset_tag}</strong><small>{notebook.serial}</small></td><td>{notebook.model}<small>{notebook.location || "Matriz"}</small></td><td><span className={`stockStatus ${notebook.status}`}>{statusLabels[notebook.status] || notebook.status}</span><small>{notebook.custody_location || "Estoque TI"}</small></td><td><span className={`compliance ${notebook.encrypted ? "ok" : "risk"}`}>{notebook.encrypted ? "Criptografado" : "Ação necessária"}</span></td><td>{notebook.condition === "new" ? "Novo" : notebook.condition === "good" ? "Bom estado" : "Requer manutenção"}</td><td>{notebook.next_maintenance_at || "Não agendada"}<small>{notebook.assigned_to || "Sem responsável"}</small></td></tr>)}</tbody></table></div>}
-        </div>
-        <div className="registry embedded inventoryTimeline">
-          <div className="registryHead"><div><p className="eyebrow">RASTREABILIDADE</p><h2>Linha do tempo física</h2></div><span>{data.assetEvents.length} eventos</span></div>
-          {data.assetEvents.length === 0 ? <div className="empty">As movimentações aparecerão aqui.</div> : <div className="assetTimeline">{data.assetEvents.slice(0, 12).map((event) => <article key={event.id}><i /><div><strong>{event.asset_tag} · {event.event_type.replaceAll("_", " ")}</strong><small>{new Date(event.created_at).toLocaleString("pt-BR")} · {event.performed_by}</small><p>{event.details.startsWith("{") ? (() => { try { return JSON.parse(event.details).notes || event.details; } catch { return event.details; } })() : event.details}</p></div></article>)}</div>}
-        </div>
-      </section>}
+        </header>
 
-      {tab === "applications" && <section className="module applicationsModule">
-        <div className="applicationStats">
-          <div><strong>{data.applications.length}</strong><span>Instalações detectadas</span></div>
-          <div><strong>{new Set(data.applications.map((item) => item.name)).size}</strong><span>Aplicativos únicos</span></div>
-          <div><strong>{data.applications.filter((item) => item.policy_status === "prohibited").length}</strong><span>Fora da política</span></div>
-          <div><strong>{data.softwareCommands.filter((item) => item.status === "queued").length}</strong><span>Comandos na fila</span></div>
-        </div>
-        <div className="softwareGrid">
-          <div className={`panel actionDrawer ${activeDialog === "applications" ? "open" : ""}`} id="applications-action">
-            <div className="panelHeading"><span className="step">04</span><div><p>ADMINISTRAÇÃO REMOTA</p><h2>Instalar ou remover</h2></div><button className="drawerClose" type="button" onClick={() => setActiveDialog(null)} aria-label="Fechar">×</button></div>
-            <p className="panelCopy">A ação exige perfil administrativo, justificativa e fica registrada. Até o agente ser conectado, a fila opera em modo simulado.</p>
-            <div className="simulationBanner"><strong>Modo seguro de simulação</strong><span>Nenhum comando será executado fisicamente no notebook.</span></div>
-            <form onSubmit={manageSoftware}>
-              <label>Notebook<select name="notebook_id" required defaultValue=""><option value="" disabled>Selecione o ativo</option>{data.notebooks.map((notebook) => <option key={notebook.id} value={notebook.id}>{notebook.asset_tag} · {notebook.model}</option>)}</select></label>
-              <div className="formRow"><label>Ação<select name="action"><option value="install">Instalar</option><option value="uninstall">Desinstalar</option></select></label><label>Versão desejada<input name="target_version" placeholder="Mais recente" /></label></div>
-              <label>Aplicativo<input name="application_name" placeholder="Microsoft Teams" required /></label>
-              <label>Justificativa<input name="justification" placeholder="Necessário para as atividades do colaborador" required /></label>
-              <label className="inlineCheck criticalCheck"><input name="confirm_uninstall" type="checkbox" /> Confirmo ações de desinstalação e seu impacto</label>
-              <button className="primary" disabled={busy !== null}>{busy === "software-command" ? "Adicionando à fila…" : "Solicitar execução administrativa"}<span>→</span></button>
-            </form>
-          </div>
-          <div className="registry embedded">
-            <div className="registryHead"><div><p className="eyebrow">SOFTWARE INVENTORY</p><h2>Aplicativos detectados</h2></div><span>coleta pelo agente</span></div>
-            {data.applications.length === 0 ? <div className="empty">O inventário será preenchido quando o agente sincronizar.</div> : <div className="tableWrap"><table><thead><tr><th>Aplicativo</th><th>Notebook</th><th>Versão</th><th>Política</th></tr></thead><tbody>{data.applications.map((application) => <tr key={application.id}><td><strong>{application.name}</strong><small>{application.publisher}</small></td><td><strong>{application.asset_tag}</strong><small>{application.model}</small></td><td><code>{application.version}</code></td><td><span className={`softwarePolicy ${application.policy_status}`}>{application.policy_status === "prohibited" ? "Proibido" : "Permitido"}</span></td></tr>)}</tbody></table></div>}
-          </div>
-        </div>
-        <div className="registry embedded commandQueue">
-          <div className="registryHead"><div><p className="eyebrow">EXECUTION QUEUE</p><h2>Fila administrativa</h2></div><span>assinada e auditável</span></div>
-          {data.softwareCommands.length === 0 ? <div className="empty">Nenhuma instalação ou desinstalação solicitada.</div> : <div className="tableWrap"><table><thead><tr><th>Ação</th><th>Aplicativo</th><th>Notebook</th><th>Solicitante</th><th>Estado</th></tr></thead><tbody>{data.softwareCommands.map((command) => <tr key={command.id}><td><span className={`commandAction ${command.action}`}>{command.action === "install" ? "Instalar" : "Desinstalar"}</span></td><td><strong>{command.application_name}</strong><small>{command.justification}</small></td><td>{command.asset_tag}</td><td><small>{command.requested_by}</small></td><td><span className="commandStatus">{command.status === "queued" ? "Na fila · simulado" : command.status}</span></td></tr>)}</tbody></table></div>}
-        </div>
-      </section>}
+        {notice && (
+          <section className={`statusBanner ${notice.detail ? "danger" : "success"}`} role="status">
+            <strong>{notice.message || notice.detail}</strong>
+            {notice.detalhe && <span>{notice.detalhe}</span>}
+            <button type="button" onClick={() => setNotice(null)} aria-label="Fechar aviso">
+              ×
+            </button>
+          </section>
+        )}
 
-      {tab === "governance" && <section className="module governanceModule">
-        <div className="governanceStats">
-          <div><strong>{data.requests.filter((item) => item.status === "pending").length}</strong><span>Aprovações pendentes</span></div>
-          <div><strong>{data.riskFindings.filter((item) => item.severity === "high").length}</strong><span>Riscos altos</span></div>
-          <div><strong>{data.campaigns.filter((item) => item.status === "active").length}</strong><span>Campanhas ativas</span></div>
-          <div><strong>{data.connectors.length}</strong><span>Conectores preparados</span></div>
-        </div>
+        {pendingOffboard && (
+          <section className="confirmBanner" role="alert">
+            <div>
+              <strong>Gerar plano de desligamento?</strong>
+              <span>
+                O Guardião vai criar as etapas por ferramenta e registrar a devolução do endpoint quando aplicável.
+                Nenhuma revogação será declarada sem verificação.
+              </span>
+            </div>
+            <div className="confirmActions">
+              <button className="secondary" type="button" onClick={() => setPendingOffboard(null)}>
+                Cancelar
+              </button>
+              <button className="primary" type="button" onClick={() => offboard(pendingOffboard)} disabled={busy !== null}>
+                {busy ? "Criando plano..." : "Criar plano"}
+              </button>
+            </div>
+          </section>
+        )}
 
-        <div className="governanceGrid">
-          <div className={`panel actionDrawer ${activeDialog === "governance" ? "open" : ""}`} id="governance-action"><div className="panelHeading"><span className="step">A</span><div><p>ACESSO SOB DEMANDA</p><h2>Solicitar exceção</h2></div><button className="drawerClose" type="button" onClick={() => setActiveDialog(null)} aria-label="Fechar">×</button></div>
-            <form onSubmit={requestAccess}><label>Colaborador<select name="user_id" required defaultValue=""><option value="" disabled>Selecione</option>{activeUsers.map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}</select></label>
-              <div className="formRow"><label>Ferramenta<select name="tool_id" required defaultValue=""><option value="" disabled>Selecione</option>{data.tools.map((tool) => <option key={tool.id} value={tool.id}>{tool.name}</option>)}</select></label><label>Papel<select name="requested_role"><option>Leitor</option><option>Operador</option><option>Aprovador</option><option>Administrador</option></select></label></div>
-              <label>Justificativa<input name="justification" placeholder="Necessário para fechamento mensal" required /></label><label>Expira em<input name="expires_at" type="date" /></label><button className="primary" disabled={busy !== null}>Enviar para aprovação <span>→</span></button>
-            </form>
-          </div>
-          <div className="panel"><div className="panelHeading"><span className="step">B</span><div><p>RECERTIFICAÇÃO</p><h2>Revisão periódica</h2></div></div>
-            <form onSubmit={createCampaign}><label>Nome da campanha<input name="name" placeholder="Revisão trimestral Q3" required /></label><label>Prazo<input name="due_at" type="date" required /></label><button className="secondary" disabled={busy !== null}>Iniciar campanha</button></form>
-            <div className="miniList">{data.campaigns.map((campaign) => <div key={campaign.id}><span><strong>{campaign.name}</strong><small>Prazo {campaign.due_at}</small></span><b>{campaign.reviewed_items}/{campaign.total_items}</b></div>)}</div>
-          </div>
-          <div className="panel"><div className="panelHeading"><span className="step">C</span><div><p>SEGREGAÇÃO DE FUNÇÕES</p><h2>Administradores</h2></div></div>
-            <form onSubmit={assignAdmin}><label>E-mail<input name="email" type="email" required placeholder="gestor@empresa.com" /></label><label>Função<select name="role"><option>Auditor</option><option>Gestor de área</option><option>Gestor de ativos</option><option>Administrador IAM</option><option>Superadministrador</option></select></label><button className="secondary" disabled={busy !== null}>Atribuir função</button></form>
-            <div className="miniList">{data.admins.map((item) => <div key={item.id}><span><strong>{item.email}</strong><small>{item.permissions}</small></span><b>{item.role}</b></div>)}</div>
-          </div>
-          <div className="panel riskPanel"><div className="panelHeading"><span className="step">D</span><div><p>RISK ENGINE</p><h2>Achados automáticos</h2></div></div>
-            <div className="riskList">{data.riskFindings.length === 0 ? <div className="empty">Nenhum risco aberto.</div> : data.riskFindings.map((risk, index) => <article key={`${risk.subject}-${index}`}><i className={risk.severity} /><div><strong>{risk.title}</strong><span>{risk.subject}</span><small>{risk.recommendation}</small></div></article>)}</div>
-          </div>
-        </div>
+        <section className="contentStack">
+          {tab === "overview" && (
+            <>
+              <section className="sectionCard introCard">
+                <div>
+                  <span className="sectionKicker">Hoje</span>
+                  <h2>Bom dia, {pageUser}</h2>
+                  <p>O que precisa de atenção hoje aparece primeiro. O resto fica como contexto, não como ruído.</p>
+                </div>
+                <div className="actionRow">
+                  <button className="primary" type="button" onClick={() => setTab("people")}>
+                    Ver pessoas
+                  </button>
+                  <button className="secondary" type="button" onClick={() => openDrawer("person")}>
+                    Criar onboarding
+                  </button>
+                </div>
+              </section>
 
-        <div className="registry embedded governanceTable"><div className="registryHead"><div><p className="eyebrow">APROVAÇÕES</p><h2>Solicitações de acesso</h2></div><span>dupla decisão</span></div>
-          {data.requests.length === 0 ? <div className="empty">Nenhuma solicitação registrada.</div> : <div className="tableWrap"><table><thead><tr><th>Colaborador</th><th>Acesso solicitado</th><th>Justificativa</th><th>Status</th><th>Decisão</th></tr></thead><tbody>{data.requests.map((request) => <tr key={request.id}><td><strong>{request.user_name}</strong><small>{request.email}</small></td><td>{request.tool_name}<small>{request.requested_role}</small></td><td>{request.justification}</td><td><span className={`requestStatus ${request.status}`}>{request.status}</span></td><td>{request.status === "pending" && <div className="decisionButtons"><button onClick={() => submit("/api/v1/access-decisions", {request_id: request.id, decision:"approved"}, `approve-${request.id}`)}>Aprovar</button><button onClick={() => submit("/api/v1/access-decisions", {request_id: request.id, decision:"rejected"}, `reject-${request.id}`)}>Rejeitar</button></div>}</td></tr>)}</tbody></table></div>}
-        </div>
+              <section className="metricGrid">
+                {overviewMetrics.map((metric) => (
+                  <MetricButton key={metric.label} value={metric.value} label={metric.label} tone={metric.tone} onClick={metric.onClick} />
+                ))}
+              </section>
 
-        <div className="connectorSection"><div className="registryHead"><div><p className="eyebrow">CATÁLOGO DE INTEGRAÇÕES</p><h2>Conectores disponíveis</h2></div><span>sem credenciais · nenhuma chamada externa</span></div><div className="connectorGrid">{data.connectors.map((connector) => <article key={connector.id}><span className="connectorIcon">{connector.name[0]}</span><div><strong>{connector.name}</strong><small>{connector.category} · {connector.auth_type}</small><p>{connector.description}</p></div><b>{connector.status === "CATALOG_ONLY" ? "Somente catálogo" : connector.status}</b></article>)}</div></div>
+              <section className="twoColumn">
+                <div className="sectionCard">
+                  <div className="sectionHeader">
+                    <div>
+                      <span className="sectionKicker">Prioridades</span>
+                      <h3>O que precisa de atenção agora</h3>
+                    </div>
+                  </div>
+                  <div className="priorityList">
+                    {priorities.length === 0 ? (
+                      <div className="emptyState">Nenhuma prioridade aberta.</div>
+                    ) : (
+                      priorities.map((item) => (
+                        <article key={`${item.title}-${item.detail}`}>
+                          <span className="priorityTone">{item.action}</span>
+                          <strong>{item.title}</strong>
+                          <small>{item.detail}</small>
+                        </article>
+                      ))
+                    )}
+                  </div>
+                </div>
 
-        <div className="registry embedded auditTable"><div className="registryHead"><div><p className="eyebrow">EVIDÊNCIAS</p><h2>Histórico auditável de ações</h2></div><span>{data.audit.length} eventos recentes</span></div><div className="tableWrap"><table><thead><tr><th>Data</th><th>Ação</th><th>Alvo</th><th>Evidência</th></tr></thead><tbody>{data.audit.map((event) => <tr key={event.id}><td>{new Date(event.created_at).toLocaleString("pt-BR")}</td><td><code>{event.action_type}</code></td><td>{event.target_user}</td><td><small>{event.details}</small></td></tr>)}</tbody></table></div></div>
-      </section>}
+                <div className="sectionCard">
+                  <div className="sectionHeader">
+                    <div>
+                      <span className="sectionKicker">Eficiência</span>
+                      <h3>Leitura rápida do ciclo operacional</h3>
+                    </div>
+                  </div>
+                  <div className="stackedMetrics">
+                    <div>
+                      <strong>{verifiedAssignments}</strong>
+                      <span>Acessos verificados</span>
+                    </div>
+                    <div>
+                      <strong>{openWorkOrders}</strong>
+                      <span>Ordens físicas abertas</span>
+                    </div>
+                    <div>
+                      <strong>{openRisks}</strong>
+                      <span>Riscos críticos</span>
+                    </div>
+                    <div>
+                      <strong>{data.campaigns.filter((item) => item.status === "active").length}</strong>
+                      <span>Campanhas ativas</span>
+                    </div>
+                  </div>
+                </div>
+              </section>
 
-      <footer><span>GUARDIÃO · Lifecycle de acessos</span><span>Onboarding · Mudanças · Offboarding · Evidências</span></footer>
+              <section className="sectionCard">
+                <div className="sectionHeader">
+                  <div>
+                    <span className="sectionKicker">Execuções recentes</span>
+                    <h3>Fluxos mais relevantes da fila</h3>
+                  </div>
+                </div>
+                <div className="tableWrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Pessoa</th>
+                        <th>Processo</th>
+                        <th>Progresso</th>
+                        <th>Pendências</th>
+                        <th>Prazo</th>
+                        <th>Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentExecutions.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="emptyCell">
+                            Nenhuma execução registrada.
+                          </td>
+                        </tr>
+                      ) : (
+                        recentExecutions.map((execution) => {
+                          const percent = progressPercent(execution.verified_steps, execution.total_steps);
+                          return (
+                            <tr key={execution.id}>
+                              <td>
+                                <strong>{execution.user_name}</strong>
+                                <small>{execution.email}</small>
+                              </td>
+                              <td>{execution.execution_type === "ONBOARDING" ? "Onboarding" : "Offboarding"}</td>
+                              <td>
+                                <div className="progressCell">
+                                  <span>{percent}%</span>
+                                  <i>
+                                    <em style={{ width: `${percent}%` }} />
+                                  </i>
+                                </div>
+                              </td>
+                              <td>{execution.attention_steps}</td>
+                              <td>{formatDateTime(execution.created_at)}</td>
+                              <td>
+                                <span className={statusClass(execution.status)}>{statusLabel(execution.status)}</span>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </>
+          )}
+
+          {tab === "people" && (
+            <section className="splitLayout">
+              <div className="sectionCard">
+                <div className="sectionHeader sectionHeader-row">
+                  <div>
+                    <span className="sectionKicker">Pessoas</span>
+                    <h3>Identidades, perfis e estado dos acessos</h3>
+                  </div>
+                  <div className="actionRow">
+                    <button className="secondary" type="button" onClick={() => setDrawerMode("person")}>
+                      Importar CSV
+                    </button>
+                    <button className="primary" type="button" onClick={() => setDrawerMode("person")}>
+                      Nova pessoa
+                    </button>
+                  </div>
+                </div>
+                <div className="filterRow">
+                  <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar pessoa" />
+                  <select defaultValue="">
+                    <option value="">Status</option>
+                    <option>active</option>
+                    <option>onboarding</option>
+                    <option>offboarding</option>
+                  </select>
+                  <select defaultValue="">
+                    <option value="">Perfil</option>
+                    {data.profiles.map((profile) => (
+                      <option key={profile.id}>{profile.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="tableWrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Pessoa</th>
+                        <th>Perfil</th>
+                        <th>Estado de acesso</th>
+                        <th>Processo atual</th>
+                        <th>Workspace</th>
+                        <th>Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visibleUsers.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="emptyCell">
+                            Nenhuma pessoa encontrada.
+                          </td>
+                        </tr>
+                      ) : (
+                        visibleUsers.map((user) => {
+                          const assignments = data.accessAssignments.filter((item) => item.user_id === user.id);
+                          const verifiedCount = assignments.filter((item) => item.verification_status === "VERIFIED").length;
+                          const execution = data.executions.find((item) => item.user_id === user.id);
+                          return (
+                            <tr
+                              key={user.id}
+                              className={selectedPersonId === user.id ? "selectedRow" : ""}
+                              onClick={() => setSelectedPersonId(user.id)}
+                            >
+                              <td>
+                                <strong>{user.name}</strong>
+                                <small>{user.email}</small>
+                              </td>
+                              <td>
+                                <strong>{user.profile_name || "Sem perfil"}</strong>
+                                <small>{user.profile_color || "Perfil não definido"}</small>
+                              </td>
+                              <td>
+                                <span className={statusClass(verifiedCount === assignments.length && assignments.length > 0 ? "VERIFIED" : "PENDING")}>
+                                  {assignments.length > 0 ? `${verifiedCount}/${assignments.length} verificados` : "Sem acesso mapeado"}
+                                </span>
+                              </td>
+                              <td>{execution ? statusLabel(execution.execution_type.toLowerCase()) : "Nenhum"}</td>
+                              <td>
+                                <strong>{user.asset_tag || "Sem equipamento"}</strong>
+                                <small>{user.model || "Workspace opcional"}</small>
+                              </td>
+                              <td>
+                                <div className="inlineActions">
+                                  <button type="button" onClick={() => setSelectedPersonId(user.id)}>
+                                    Abrir
+                                  </button>
+                                  <button type="button" onClick={() => setPendingOffboard(user.email)}>
+                                    Desligar
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="sectionCard detailCard">
+                <div className="sectionHeader">
+                  <div>
+                    <span className="sectionKicker">Drawer da pessoa</span>
+                    <h3>{selectedPerson ? selectedPerson.name : "Selecione uma pessoa"}</h3>
+                  </div>
+                  {selectedPerson && (
+                    <span className={statusClass(selectedPerson.status)}>{statusLabel(selectedPerson.status)}</span>
+                  )}
+                </div>
+
+                {selectedPerson ? (
+                  <>
+                    <div className="detailStats">
+                      <div>
+                        <strong>{selectedAssignments.length}</strong>
+                        <span>Acessos</span>
+                      </div>
+                      <div>
+                        <strong>{selectedPersonExecutions.length}</strong>
+                        <span>Execuções</span>
+                      </div>
+                      <div>
+                        <strong>{selectedAssignments.filter((item) => item.verification_status === "VERIFIED").length}</strong>
+                        <span>Verificados</span>
+                      </div>
+                      <div>
+                        <strong>{selectedPerson.asset_tag ? "1" : "0"}</strong>
+                        <span>Workspace</span>
+                      </div>
+                    </div>
+
+                    <div className="personSections">
+                      <section>
+                        <h4>Resumo</h4>
+                        <p>
+                          {selectedPerson.profile_name || "Sem perfil definido"} com{" "}
+                          {selectedAssignments.length > 0
+                            ? `${selectedAssignments.filter((item) => item.verification_status === "VERIFIED").length} acessos verificados`
+                            : "acessos ainda não mapeados"}
+                          .
+                        </p>
+                      </section>
+                      <section>
+                        <h4>Acessos</h4>
+                        <div className="miniStack">
+                          {selectedAssignments.length === 0 ? (
+                            <span className="emptyState compact">Nenhum acesso registrado.</span>
+                          ) : (
+                            selectedAssignments.map((assignment) => (
+                              <div key={assignment.id} className="miniRow">
+                                <div>
+                                  <strong>{assignment.tool_name}</strong>
+                                  <small>{assignment.account_identifier || "Conta não informada"}</small>
+                                </div>
+                                <span className={statusClass(assignment.verification_status)}>
+                                  {statusLabel(assignment.verification_status)}
+                                </span>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </section>
+                      <section>
+                        <h4>Contas</h4>
+                        <div className="miniStack">
+                          {selectedAssignments.map((assignment) => (
+                            <div key={`${assignment.id}-account`} className="miniRow">
+                              <div>
+                                <strong>{assignment.tool_name}</strong>
+                                <small>{assignment.expected_state} x {assignment.observed_state}</small>
+                              </div>
+                              <span className={toneClass(assignment.observed_state)}>{assignment.observed_state}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                      <section>
+                        <h4>Lifecycle</h4>
+                        <div className="miniStack">
+                          {selectedPersonExecutions.length === 0 ? (
+                            <span className="emptyState compact">Sem processo em andamento.</span>
+                          ) : (
+                            selectedPersonExecutions.map((execution) => (
+                              <div key={execution.id} className="miniRow">
+                                <div>
+                                  <strong>{execution.execution_type === "ONBOARDING" ? "Onboarding" : "Offboarding"}</strong>
+                                  <small>{formatDateTime(execution.created_at)}</small>
+                                </div>
+                                <span className={statusClass(execution.status)}>{statusLabel(execution.status)}</span>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </section>
+                      <section>
+                        <h4>Evidências</h4>
+                        <p className="subtleCopy">
+                          As evidências são registradas no lifecycle e aparecem como resultado das etapas verificadas.
+                        </p>
+                      </section>
+                      <section>
+                        <h4>Workspace</h4>
+                        <p className="subtleCopy">{selectedPerson.asset_tag ? `${selectedPerson.asset_tag} · ${selectedPerson.model || "Notebook"}` : "Sem equipamento vinculado."}</p>
+                      </section>
+                      <section>
+                        <h4>Histórico</h4>
+                        <p className="subtleCopy">
+                          Última atualização operacional: {selectedAssignments[0]?.last_verified_at ? formatDateTime(selectedAssignments[0]?.last_verified_at) : "sem verificação"}.
+                        </p>
+                      </section>
+                    </div>
+                  </>
+                ) : (
+                  <div className="emptyState">Escolha uma pessoa para ver os detalhes.</div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {tab === "profiles" && (
+            <section className="splitLayout">
+              <div className="sectionCard">
+                <div className="sectionHeader sectionHeader-row">
+                  <div>
+                    <span className="sectionKicker">Perfis</span>
+                    <h3>Lista limpa, com número e escopo por área</h3>
+                  </div>
+                  <button className="primary" type="button" onClick={() => setDrawerMode("profile")}>
+                    Novo perfil
+                  </button>
+                </div>
+                <div className="tableWrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Perfil</th>
+                        <th>Pessoas</th>
+                        <th>Ferramentas</th>
+                        <th>Exceções</th>
+                        <th>Divergências</th>
+                        <th>Atualizado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visibleProfiles.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="emptyCell">
+                            Nenhum perfil encontrado.
+                          </td>
+                        </tr>
+                      ) : (
+                        visibleProfiles.map((profile) => {
+                          const tools = parsePipeList(profile.tool_names);
+                          return (
+                            <tr
+                              key={profile.id}
+                              className={selectedProfileId === profile.id ? "selectedRow" : ""}
+                              onClick={() => setSelectedProfileId(profile.id)}
+                            >
+                              <td>
+                                <strong>{profile.name}</strong>
+                                <small>{profile.description}</small>
+                              </td>
+                              <td>{profile.members}</td>
+                              <td>{tools.length}</td>
+                              <td>{parsePipeList(profile.entitlements).length}</td>
+                              <td>{Math.max(0, profile.members - tools.length)}</td>
+                              <td>Hoje</td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="sectionCard detailCard">
+                <div className="sectionHeader">
+                  <div>
+                    <span className="sectionKicker">Perfil selecionado</span>
+                    <h3>{selectedProfile ? selectedProfile.name : "Selecione um perfil"}</h3>
+                  </div>
+                  {selectedProfile && <span className={toneClass(selectedProfile.color)}>{selectedProfile.color || "Área"}</span>}
+                </div>
+
+                {selectedProfile ? (
+                  <>
+                    <div className="detailStats">
+                      <div>
+                        <strong>{selectedProfile.members}</strong>
+                        <span>Pessoas</span>
+                      </div>
+                      <div>
+                        <strong>{selectedProfileTools.length}</strong>
+                        <span>Ferramentas</span>
+                      </div>
+                      <div>
+                        <strong>{selectedProfileEntitlements.length}</strong>
+                        <span>Exceções</span>
+                      </div>
+                      <div>
+                        <strong>{Math.max(0, selectedProfile.members - selectedProfileTools.length)}</strong>
+                        <span>Divergências</span>
+                      </div>
+                    </div>
+
+                    <div className="personSections">
+                      <section>
+                        <h4>Acesso básico</h4>
+                        <p>{selectedProfile.description}</p>
+                      </section>
+                      <section>
+                        <h4>Acessos da área</h4>
+                        <div className="chipsRow">
+                          {selectedProfileTools.length === 0 ? (
+                            <span className="emptyState compact">Sem ferramentas mapeadas.</span>
+                          ) : (
+                            selectedProfileTools.map((tool) => <span className="chip" key={tool}>{tool}</span>)
+                          )}
+                        </div>
+                      </section>
+                      <section>
+                        <h4>Acessos da função</h4>
+                        <div className="miniStack">
+                          {selectedProfileTools.map((tool, index) => (
+                            <div className="miniRow" key={`${tool}-${index}`}>
+                              <div>
+                                <strong>{tool}</strong>
+                                <small>{index % 2 === 0 ? "API" : "Manual"}</small>
+                              </div>
+                              <span className={statusClass(index % 2 === 0 ? "VERIFIED" : "PENDING")}>
+                                {index % 2 === 0 ? "Automática" : "Evidência"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                      <section>
+                        <h4>Restrições</h4>
+                        <p className="subtleCopy">Exceções temporárias e escopos fora do padrão aparecem como pendências individuais.</p>
+                      </section>
+                      <section>
+                        <h4>Pessoas vinculadas</h4>
+                        <p className="subtleCopy">{selectedProfile.members} colaboradores associados ao perfil.</p>
+                      </section>
+                      <section>
+                        <h4>Matriz de acesso</h4>
+                        <div className="tableWrap compactTable">
+                          <table>
+                            <thead>
+                              <tr>
+                                <th>Ferramenta</th>
+                                <th>Papel</th>
+                                <th>Escopo</th>
+                                <th>Método</th>
+                                <th>Verificação</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {selectedProfileTools.length === 0 ? (
+                                <tr>
+                                  <td colSpan={5} className="emptyCell">
+                                    Nenhuma ferramenta vinculada.
+                                  </td>
+                                </tr>
+                              ) : (
+                                selectedProfileTools.map((tool, index) => (
+                                  <tr key={tool}>
+                                    <td>{tool}</td>
+                                    <td>{index % 2 === 0 ? "Usuário" : "Operador"}</td>
+                                    <td>{index % 2 === 0 ? "Empresa" : "Departamento"}</td>
+                                    <td>{index % 2 === 0 ? "API" : "Manual"}</td>
+                                    <td>{index % 2 === 0 ? "Automática" : "Evidência"}</td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </section>
+                    </div>
+                  </>
+                ) : (
+                  <div className="emptyState">Escolha um perfil para ver a matriz.</div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {tab === "lifecycle" && (
+            <section className="lifecycleLayout">
+              <div className="sectionCard lifecycleListCard">
+                <div className="sectionHeader">
+                  <div>
+                    <span className="sectionKicker">Execuções</span>
+                    <h3>Fila operacional</h3>
+                  </div>
+                </div>
+                <div className="executionList">
+                  {visibleExecutions.length === 0 ? (
+                    <div className="emptyState">Nenhuma execução encontrada.</div>
+                  ) : (
+                    visibleExecutions.map((execution) => {
+                      const percent = progressPercent(execution.verified_steps, execution.total_steps);
+                      return (
+                        <button
+                          key={execution.id}
+                          type="button"
+                          className={`executionRow ${selectedExecutionId === execution.id ? "selectedRow" : ""}`}
+                          onClick={() => setSelectedExecutionId(execution.id)}
+                        >
+                          <div>
+                            <span className={`pill ${execution.execution_type === "OFFBOARDING" ? "pill-warning" : "pill-info"}`}>
+                              {execution.execution_type === "OFFBOARDING" ? "Offboarding" : "Onboarding"}
+                            </span>
+                            <strong>{execution.user_name}</strong>
+                            <small>{execution.email}</small>
+                          </div>
+                          <div className="progressCell">
+                            <span>{execution.verified_steps}/{execution.total_steps} etapas concluídas</span>
+                            <i>
+                              <em style={{ width: `${percent}%` }} />
+                            </i>
+                          </div>
+                          <div className="executionMeta">
+                            <span className={statusClass(execution.status)}>{statusLabel(execution.status)}</span>
+                            <small>{execution.attention_steps} pendências</small>
+                          </div>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              <div className="sectionCard lifecycleDetailCard">
+                <div className="sectionHeader">
+                  <div>
+                    <span className="sectionKicker">Execução selecionada</span>
+                    <h3>{selectedExecution ? `${selectedExecution.execution_type === "OFFBOARDING" ? "Offboarding" : "Onboarding"} de ${selectedExecution.user_name}` : "Selecione uma execução"}</h3>
+                  </div>
+                  {selectedExecution && <span className={statusClass(selectedExecution.status)}>{statusLabel(selectedExecution.status)}</span>}
+                </div>
+
+                {selectedExecution ? (
+                  <>
+                    <div className="detailMeta">
+                      <span>Iniciado em {formatDateTime(selectedExecution.created_at)}</span>
+                      <span>Prazo: hoje às 12:00</span>
+                      <span>{selectedExecution.verified_steps}/{selectedExecution.total_steps} concluídas</span>
+                    </div>
+
+                    <div className="timeline">
+                      {selectedExecutionSteps.length === 0 ? (
+                        <div className="emptyState">Nenhuma etapa encontrada.</div>
+                      ) : (
+                        selectedExecutionSteps.map((step) => {
+                          const isVerified = step.status === "VERIFIED";
+                          const isFailed = step.status === "FAILED";
+                          return (
+                            <article key={step.id} className={`timelineItem ${isFailed ? "failed" : ""}`}>
+                              <div className="timelineMarker">
+                                <span />
+                              </div>
+                              <div className="timelineContent">
+                                <div className="timelineTop">
+                                  <div>
+                                    <strong>{step.tool_name || step.label}</strong>
+                                    <small>
+                                      {step.method} · {step.assignee} · {step.due_at ? formatDate(step.due_at) : "sem prazo"}
+                                    </small>
+                                  </div>
+                                  <span className={statusClass(step.status)}>{statusLabel(step.status)}</span>
+                                </div>
+
+                                <p>{step.result || step.label}</p>
+
+                                <div className="stepMeta">
+                                  <span>Tentativas: {step.attempts}</span>
+                                  <span>{step.evidence ? `Evidência: ${step.evidence}` : "Sem evidência"}</span>
+                                  {step.error && <span className="errorText">{step.error}</span>}
+                                </div>
+
+                                {!isVerified && (
+                                  <form className="stepForm" onSubmit={(event) => updateExecutionStep(event, step.id)}>
+                                    <input name="evidence" placeholder="Evidência ou referência da validação" required />
+                                    <input name="error" placeholder="Erro ou bloqueio, se houver" />
+                                    <div className="stepActions">
+                                      <button type="submit" value="complete_manual" className="primary" disabled={busy !== null}>
+                                        Concluir
+                                      </button>
+                                      <button type="submit" value="mark_failed" className="secondary" disabled={busy !== null}>
+                                        Falha
+                                      </button>
+                                      {isFailed && (
+                                        <button type="submit" value="retry" className="ghostButton" disabled={busy !== null}>
+                                          Tentar novamente
+                                        </button>
+                                      )}
+                                    </div>
+                                  </form>
+                                )}
+                              </div>
+                            </article>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    <section className="miniBlock">
+                      <h4>Acessos observados</h4>
+                      <div className="tableWrap compactTable">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Ferramenta</th>
+                              <th>Conta</th>
+                              <th>Esperado</th>
+                              <th>Observado</th>
+                              <th>Verificação</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {data.accessAssignments.filter((item) => item.user_id === selectedExecution.user_id).length === 0 ? (
+                              <tr>
+                                <td colSpan={5} className="emptyCell">
+                                  Nenhum acesso registrado para esta pessoa.
+                                </td>
+                              </tr>
+                            ) : (
+                              data.accessAssignments
+                                .filter((item) => item.user_id === selectedExecution.user_id)
+                                .map((assignment) => (
+                                  <tr key={assignment.id}>
+                                    <td>{assignment.tool_name}</td>
+                                    <td>{assignment.account_identifier || "Sem conta"}</td>
+                                    <td>{assignment.expected_state}</td>
+                                    <td>{assignment.observed_state}</td>
+                                    <td>
+                                      <span className={statusClass(assignment.verification_status)}>
+                                        {statusLabel(assignment.verification_status)}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </>
+                ) : (
+                  <div className="emptyState">Selecione uma execução para ver a linha do tempo.</div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {tab === "requests" && (
+            <section className="splitLayout">
+              <div className="sectionCard">
+                <div className="sectionHeader sectionHeader-row">
+                  <div>
+                    <span className="sectionKicker">Pendências</span>
+                    <h3>Fila operacional</h3>
+                  </div>
+                  <div className="actionRow">
+                    <button className="secondary" type="button" onClick={() => openDrawer("request")}>
+                      Nova solicitação
+                    </button>
+                    <button className="primary" type="button" onClick={() => openDrawer("campaign")}>
+                      Nova recertificação
+                    </button>
+                  </div>
+                </div>
+
+                <div className="filterTabs">
+                  {(["mine", "all", "overdue", "unassigned", "failures", "approvals"] as PendingFilter[]).map((item) => (
+                    <button key={item} type="button" className={pendingFilter === item ? "active" : ""} onClick={() => setPendingFilter(item)}>
+                      {item === "mine" && "Minhas pendências"}
+                      {item === "all" && "Todas"}
+                      {item === "overdue" && "Atrasadas"}
+                      {item === "unassigned" && "Sem responsável"}
+                      {item === "failures" && "Falhas"}
+                      {item === "approvals" && "Aprovações"}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="pendingList">
+                  {(() => {
+                    const items: Array<{ title: string; detail: string; due?: string; tone: string; actions?: ReactNode }> = [
+                      ...visibleRequests
+                        .filter((item) => pendingFilter === "all" || pendingFilter === "approvals" || item.status === "pending")
+                        .map((item) => ({
+                          title: `${item.tool_name} de ${item.user_name}`,
+                          detail: `${item.requested_role} · ${item.justification}`,
+                          due: item.expires_at,
+                          tone: item.status === "pending" ? "warning" : "success",
+                          actions: item.status === "pending" ? (
+                            <div className="inlineActions">
+                              <button type="button" onClick={() => submit("/api/v1/access-decisions", { request_id: item.id, decision: "approved" }, `approve-${item.id}`)}>
+                                Aprovar
+                              </button>
+                              <button type="button" onClick={() => submit("/api/v1/access-decisions", { request_id: item.id, decision: "rejected" }, `reject-${item.id}`)}>
+                                Rejeitar
+                              </button>
+                            </div>
+                          ) : null,
+                        })),
+                      ...data.executionSteps
+                        .filter((item) => item.status !== "VERIFIED")
+                        .filter((item) => pendingFilter !== "approvals")
+                        .map((item) => ({
+                          title: `${item.tool_name || item.label} de ${item.user_name}`,
+                          detail: `${item.assignee} · ${item.method} · ${item.status}`,
+                          due: item.due_at,
+                          tone: isOverdue(item.due_at) ? "danger" : "info",
+                        })),
+                    ];
+
+                    const filteredItems =
+                      pendingFilter === "overdue"
+                        ? items.filter((item) => item.due && isOverdue(item.due))
+                        : pendingFilter === "unassigned"
+                          ? items.filter((item) => item.detail.includes("Sem responsável") || item.detail.includes("sem responsável"))
+                          : pendingFilter === "failures"
+                            ? items.filter((item) => item.detail.toLowerCase().includes("failed") || item.detail.toLowerCase().includes("falha"))
+                            : items;
+
+                    if (filteredItems.length === 0) {
+                      return <div className="emptyState">Nenhuma pendência aberta.</div>;
+                    }
+
+                    return filteredItems.slice(0, 12).map((item) => (
+                      <article key={`${item.title}-${item.detail}`} className="pendingItem">
+                        <span className={`pill pill-${item.tone as "warning" | "danger" | "info" | "neutral" | "success"}`}>
+                          {item.tone === "warning" ? "Aguardando" : item.tone === "danger" ? "Atrasado" : "Em análise"}
+                        </span>
+                        <strong>{item.title}</strong>
+                        <small>{item.detail}</small>
+                        <div className="pendingFooter">
+                          <span>{item.due ? `Prazo: ${formatDateTime(item.due)}` : "Sem prazo"}</span>
+                          {item.actions}
+                        </div>
+                      </article>
+                    ));
+                  })()}
+                </div>
+              </div>
+
+              <div className="sectionCard detailCard">
+                <div className="sectionHeader">
+                  <div>
+                    <span className="sectionKicker">Ações rápidas</span>
+                    <h3>Fluxos que ainda dependem de decisão</h3>
+                  </div>
+                </div>
+                <div className="quickActionGrid">
+                  <button className="quickAction" type="button" onClick={() => openDrawer("request")}>
+                    <strong>Solicitar acesso</strong>
+                    <span>Exceção com prazo e justificativa.</span>
+                  </button>
+                  <button className="quickAction" type="button" onClick={() => openDrawer("campaign")}>
+                    <strong>Iniciar recertificação</strong>
+                    <span>Revisão periódica de acessos.</span>
+                  </button>
+                  <button className="quickAction" type="button" onClick={() => openDrawer("admin")}>
+                    <strong>Atribuir administrador</strong>
+                    <span>Função administrativa com escopo.</span>
+                  </button>
+                </div>
+
+                <div className="miniBlock">
+                  <h4>Resumo operacional</h4>
+                  <div className="miniStack">
+                    <div className="miniRow">
+                      <div>
+                        <strong>Aprovações pendentes</strong>
+                        <small>{openRequests}</small>
+                      </div>
+                      <span className={statusClass("PENDING")}>Pendente</span>
+                    </div>
+                    <div className="miniRow">
+                      <div>
+                        <strong>Riscos altos</strong>
+                        <small>{openRisks}</small>
+                      </div>
+                      <span className={statusClass(openRisks > 0 ? "FAILED" : "VERIFIED")}>
+                        {openRisks > 0 ? "Atenção" : "Ok"}
+                      </span>
+                    </div>
+                    <div className="miniRow">
+                      <div>
+                        <strong>Recertificações ativas</strong>
+                        <small>{data.campaigns.filter((item) => item.status === "active").length}</small>
+                      </div>
+                      <span className={statusClass("RUNNING")}>Em andamento</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {tab === "integrations" && (
+            <section className="stackLayout">
+              <section className="sectionCard">
+                <div className="sectionHeader sectionHeader-row">
+                  <div>
+                    <span className="sectionKicker">Integrações</span>
+                    <h3>Catálogo e estado do conector</h3>
+                  </div>
+                  <span className="supportNote">Sem credenciais até a configuração real</span>
+                </div>
+                <div className="connectorGrid">
+                  {visibleConnectors.map((connector) => (
+                    <article key={connector.id} className="connectorCard">
+                      <div className="connectorIcon">{initials(connector.name)}</div>
+                      <div className="connectorBody">
+                        <strong>{connector.name}</strong>
+                        <small>
+                          {connector.category} · {connector.auth_type}
+                        </small>
+                        <p>{connector.description}</p>
+                      </div>
+                      <div className="connectorActions">
+                        <span className={statusClass(connector.status)}>{statusLabel(connector.status)}</span>
+                        <button className="secondary" type="button">
+                          Configurar
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+
+              <section className="sectionCard">
+                <div className="sectionHeader sectionHeader-row">
+                  <div>
+                    <span className="sectionKicker">Software</span>
+                    <h3>Fila administrativa</h3>
+                  </div>
+                  <span className="supportNote">Instalação e remoção com perfil admin</span>
+                </div>
+                <div className="tableWrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Ação</th>
+                        <th>Aplicativo</th>
+                        <th>Notebook</th>
+                        <th>Solicitante</th>
+                        <th>Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visibleCommands.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="emptyCell">
+                            Nenhum comando na fila.
+                          </td>
+                        </tr>
+                      ) : (
+                        visibleCommands.map((command) => (
+                          <tr key={command.id}>
+                            <td>
+                              <span className={statusClass(command.action === "install" ? "RUNNING" : "WARNING")}>
+                                {command.action === "install" ? "Instalar" : "Desinstalar"}
+                              </span>
+                            </td>
+                            <td>
+                              <strong>{command.application_name}</strong>
+                              <small>{command.justification}</small>
+                            </td>
+                            <td>{command.asset_tag}</td>
+                            <td>
+                              <small>{command.requested_by}</small>
+                            </td>
+                            <td>
+                              <span className={statusClass(command.status)}>{statusLabel(command.status)}</span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </section>
+          )}
+
+          {tab === "workspace" && (
+            <section className="stackLayout">
+              <section className="metricGrid metricGrid-workspace">
+                <MetricButton value={data.notebooks.length} label="Notebooks cadastrados" tone="neutral" onClick={() => openDrawer("notebook")} />
+                <MetricButton value={visibleNotebooks.filter((item) => item.status === "available").length} label="Em estoque" tone="success" onClick={() => openDrawer("movement")} />
+                <MetricButton value={visibleNotebooks.filter((item) => item.status === "assigned").length} label="Em uso" tone="info" onClick={() => setTab("people")} />
+                <MetricButton value={openWorkOrders} label="Ordens abertas" tone="warning" onClick={() => openDrawer("movement")} />
+              </section>
+
+              <section className="sectionCard">
+                <div className="sectionHeader sectionHeader-row">
+                  <div>
+                    <span className="sectionKicker">Workspace</span>
+                    <h3>Recursos associados à pessoa, sem virar a identidade</h3>
+                  </div>
+                  <div className="actionRow">
+                    <button className="secondary" type="button" onClick={() => openDrawer("notebook")}>
+                      Adicionar notebook
+                    </button>
+                    <button className="primary" type="button" onClick={() => openDrawer("movement")}>
+                      Nova movimentação
+                    </button>
+                  </div>
+                </div>
+                <div className="twoColumn">
+                  <div className="sectionCard insetCard">
+                    <h4>Inventário</h4>
+                    <div className="tableWrap">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Patrimônio</th>
+                            <th>Equipamento</th>
+                            <th>Custódia</th>
+                            <th>Compliance</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {visibleNotebooks.length === 0 ? (
+                            <tr>
+                              <td colSpan={4} className="emptyCell">
+                                Nenhum notebook cadastrado.
+                              </td>
+                            </tr>
+                          ) : (
+                            visibleNotebooks.map((notebook) => (
+                              <tr key={notebook.id}>
+                                <td>
+                                  <strong>{notebook.asset_tag}</strong>
+                                  <small>{notebook.serial}</small>
+                                </td>
+                                <td>
+                                  {notebook.model}
+                                  <small>{notebook.location || "Matriz"}</small>
+                                </td>
+                                <td>
+                                  <span className={statusClass(notebook.status)}>{statusLabel(notebook.status)}</span>
+                                  <small>{notebook.custody_location || "Estoque TI"}</small>
+                                </td>
+                                <td>
+                                  <span className={statusClass(notebook.encrypted ? "VERIFIED" : "FAILED")}>
+                                    {notebook.encrypted ? "Criptografado" : "Ação necessária"}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div className="sectionCard insetCard">
+                    <h4>Trabalho físico</h4>
+                    <div className="miniStack">
+                      {visibleWorkOrders.length === 0 ? (
+                        <div className="emptyState compact">Nenhuma ordem aberta.</div>
+                      ) : (
+                        visibleWorkOrders.map((order) => (
+                          <article key={order.id} className="miniWorkOrder">
+                            <span className={`pill ${order.order_type.includes("maintenance") ? "pill-warning" : "pill-info"}`}>
+                              {order.order_type.replaceAll("_", " ")}
+                            </span>
+                            <strong>{order.asset_tag}</strong>
+                            <small>
+                              {order.model} · {order.assignee}
+                            </small>
+                            <p>{order.notes}</p>
+                            <div className="pendingFooter">
+                              <span>{order.due_at ? `até ${order.due_at}` : "sem prazo"}</span>
+                              <span className={statusClass(order.status)}>{statusLabel(order.status)}</span>
+                            </div>
+                          </article>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section className="sectionCard">
+                <div className="sectionHeader sectionHeader-row">
+                  <div>
+                    <span className="sectionKicker">Rastreabilidade</span>
+                    <h3>Linha do tempo física</h3>
+                  </div>
+                </div>
+                <div className="timeline timeline-compact">
+                  {data.assetEvents.length === 0 ? (
+                    <div className="emptyState">As movimentações aparecerão aqui.</div>
+                  ) : (
+                    data.assetEvents.slice(0, 12).map((event) => (
+                      <article key={event.id} className="timelineItem">
+                        <div className="timelineMarker">
+                          <span />
+                        </div>
+                        <div className="timelineContent">
+                          <div className="timelineTop">
+                            <div>
+                              <strong>
+                                {event.asset_tag} · {event.event_type.replaceAll("_", " ")}
+                              </strong>
+                              <small>
+                                {formatDateTime(event.created_at)} · {event.performed_by}
+                              </small>
+                            </div>
+                          </div>
+                          <p>{event.details.startsWith("{") ? (() => {
+                            try {
+                              return JSON.parse(event.details).notes || event.details;
+                            } catch {
+                              return event.details;
+                            }
+                          })() : event.details}</p>
+                        </div>
+                      </article>
+                    ))
+                  )}
+                </div>
+              </section>
+            </section>
+          )}
+        </section>
+
+        <footer className="footer">
+          <span>GUARDIÃO</span>
+          <span>Onboarding · Mudanças · Offboarding · Evidências</span>
+        </footer>
+      </div>
+
+      {renderDrawer()}
     </main>
   );
 }
