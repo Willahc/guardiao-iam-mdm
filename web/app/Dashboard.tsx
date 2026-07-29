@@ -153,6 +153,13 @@ export default function Dashboard({ admin }: { admin: AdminUser }) {
     inspection: "Em conferência", sanitizing: "Em higienização", maintenance: "Em manutenção",
     lost: "Extraviado",
   };
+  const moduleMeta = {
+    people: { eyebrow: "CICLO DE IDENTIDADE", title: "Pessoas", highlight: "sob controle.", copy: "Admissões, movimentações e desligamentos com acesso e equipamento no mesmo fluxo." },
+    profiles: { eyebrow: "CONTROLE DE ACESSO", title: "Permissões", highlight: "por função.", copy: "Perfis claros por área, menor privilégio e concessões previsíveis desde o primeiro dia." },
+    inventory: { eyebrow: "CADEIA DE CUSTÓDIA", title: "Ativos", highlight: "em movimento.", copy: "Acompanhe cada notebook do estoque à entrega, devolução, manutenção e próximo ciclo." },
+    applications: { eyebrow: "SOFTWARE GOVERNANCE", title: "Aplicativos", highlight: "sob política.", copy: "Inventário, conformidade e execução administrativa sem distribuir credenciais privilegiadas." },
+    governance: { eyebrow: "RISCO E CONFORMIDADE", title: "Decisões", highlight: "com evidência.", copy: "Aprovações, recertificações, riscos e auditoria reunidos em uma fila operacional." },
+  }[tab];
 
   return (
     <main>
@@ -164,8 +171,8 @@ export default function Dashboard({ admin }: { admin: AdminUser }) {
         </div>
       </header>
 
-      <section className="hero compactHero" id="top">
-        <div><p className="eyebrow">CENTRAL DE OPERAÇÕES · AMBIENTE PROTEGIDO</p><h1>Governança em <em>movimento.</em></h1><p className="heroCopy">Acompanhe identidades, acessos e ativos que exigem decisão. As ações prioritárias aparecem primeiro; o contexto permanece no fluxo.</p></div>
+      <section className="hero compactHero moduleHero" id="top">
+        <div><p className="eyebrow">{moduleMeta.eyebrow}</p><h1>{moduleMeta.title} <em>{moduleMeta.highlight}</em></h1><p className="heroCopy">{moduleMeta.copy}</p></div>
         <div className="statusCard">
           <div className="pulse"><i /> POSTURA OPERACIONAL</div>
           <div className="metric"><strong>{activeUsers.length}</strong><span>identidades ativas</span></div>
@@ -177,7 +184,7 @@ export default function Dashboard({ admin }: { admin: AdminUser }) {
 
       {notice && <div className={`notice ${notice.detail ? "noticeDanger" : ""}`} role="status"><strong>{notice.message || notice.detail}</strong>{notice.detalhe && <span>{notice.detalhe}</span>}<button onClick={() => setNotice(null)} aria-label="Fechar">×</button></div>}
       {pendingOffboard && <div className="confirmBar" role="alert">
-        <div><strong>Confirmar offboarding?</strong><span>Todos os acessos de {pendingOffboard} serão revogados e o notebook voltará ao estoque.</span></div>
+        <div><strong>Confirmar offboarding?</strong><span>Todos os acessos de {pendingOffboard} serão revogados e uma devolução física será aberta para o notebook.</span></div>
         <div><button className="cancelAction" onClick={() => setPendingOffboard(null)}>Cancelar</button><button className="confirmAction" onClick={() => offboard(pendingOffboard)} disabled={busy !== null}>{busy ? "Revogando…" : "Confirmar revogação"}</button></div>
       </div>}
 

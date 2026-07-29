@@ -24,7 +24,8 @@ test("renders the Guardião control plane", async () => {
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /Guardião/);
-  assert.match(html, /Governança em/);
+  assert.match(html, /Pessoas/);
+  assert.match(html, /sob controle/);
   assert.match(html, /Entrada e desligamento/);
   assert.match(html, /Perfis e permissões/);
   assert.match(html, /Notebooks e compliance/);
