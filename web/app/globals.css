@@ -621,3 +621,183 @@ footer { padding-top: 20px; padding-bottom: 20px; }
   .module { padding-left: 12px; padding-right: 12px; }
   .panel { padding: 20px 16px; }
 }
+
+/* Guardião workspace grid — continuous, aligned operational surfaces */
+.module {
+  display: grid;
+  gap: 0;
+  padding-bottom: 42px;
+  align-items: stretch;
+}
+
+.module > .panel,
+.module > .registry,
+.module > .connectorSection,
+.module > .inventorySummary,
+.module > .applicationStats,
+.module > .governanceStats,
+.module > .lifecycleWorkspace,
+.module > .softwareGrid,
+.module > .governanceGrid,
+.module > .profileList {
+  margin: 0;
+}
+
+.module > .panel,
+.module > .registry,
+.module > .connectorSection,
+.module > .inventorySummary,
+.module > .applicationStats,
+.module > .governanceStats {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.module > :first-child,
+.module.twoColumns > :first-child {
+  border-top-left-radius: 8px;
+}
+
+.module > :last-child {
+  border-bottom-right-radius: 8px;
+  border-bottom-left-radius: 8px;
+}
+
+.module:not(.twoColumns) > * + * {
+  border-top: 0;
+}
+
+.onboardingPanel { margin-bottom: 0; }
+
+.module.twoColumns {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0;
+  align-items: stretch;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--card);
+}
+
+.module.twoColumns > .panel {
+  border: 0;
+  border-right: 1px solid var(--line);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.module.twoColumns > .profileList {
+  align-content: start;
+  gap: 0;
+  background: var(--card);
+}
+
+.module.twoColumns > .profileList .profileCard {
+  min-height: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-top: 3px solid var(--red);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.module.twoColumns > .profileList .profileCard:last-child { border-bottom: 0; }
+
+.inventoryLayout {
+  grid-template-columns: minmax(360px, .72fr) minmax(480px, 1.28fr) !important;
+}
+
+.inventoryLayout > .inventorySummary {
+  border: 0;
+  border-radius: 0;
+}
+
+.inventoryLayout > .lifecycleWorkspace,
+.inventoryLayout > .inventoryTable,
+.inventoryLayout > .inventoryTimeline {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--line);
+}
+
+.lifecycleWorkspace,
+.softwareGrid,
+.governanceGrid {
+  gap: 0;
+  align-items: stretch;
+}
+
+.lifecycleWorkspace > .panel,
+.lifecycleWorkspace > .workOrderPanel,
+.softwareGrid > .panel,
+.softwareGrid > .registry,
+.governanceGrid > .panel {
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.lifecycleWorkspace > :first-child,
+.softwareGrid > :first-child,
+.governanceGrid > :nth-child(odd) {
+  border-right: 1px solid var(--line);
+}
+
+.governanceGrid > .panel { border-bottom: 1px solid var(--line); }
+.governanceGrid > :nth-last-child(-n + 2) { border-bottom: 0; }
+
+.applicationsModule,
+.governanceModule { gap: 0; }
+
+.applicationsModule > .softwareGrid,
+.applicationsModule > .commandQueue,
+.governanceModule > .governanceGrid,
+.governanceModule > .governanceTable,
+.governanceModule > .connectorSection,
+.governanceModule > .auditTable {
+  border: 1px solid var(--line);
+  border-top: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.applicationsModule > .applicationStats,
+.governanceModule > .governanceStats {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.applicationsModule > :last-child,
+.governanceModule > :last-child {
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+
+.registryHead { min-height: 78px; }
+.panelHeading { min-height: 40px; }
+
+@media (max-width: 850px) {
+  .module.twoColumns {
+    grid-template-columns: 1fr;
+  }
+  .module.twoColumns > .panel {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .inventoryLayout { grid-template-columns: 1fr !important; }
+  .inventoryLayout > .inventorySummary,
+  .inventoryLayout > .lifecycleWorkspace,
+  .inventoryLayout > .inventoryTable,
+  .inventoryLayout > .inventoryTimeline { grid-column: 1; }
+  .lifecycleWorkspace,
+  .softwareGrid,
+  .governanceGrid { grid-template-columns: 1fr; }
+  .lifecycleWorkspace > :first-child,
+  .softwareGrid > :first-child,
+  .governanceGrid > :nth-child(odd) {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .governanceGrid > .panel { border-bottom: 1px solid var(--line); }
+  .governanceGrid > .panel:last-child { border-bottom: 0; }
+}
