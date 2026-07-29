@@ -8,12 +8,12 @@ export async function generateMetadata(): Promise<Metadata> {
   const protocol = requestHeaders.get("x-forwarded-proto") || (host.includes("localhost") ? "http" : "https");
   const socialImage = `${protocol}://${host}/og.png`;
   return {
-    title: "Guardião — Identity Control Plane",
-    description: "Perfis de acesso por área, colaboradores e inventário de notebooks.",
+    title: "Guardião — Lifecycle de acessos",
+    description: "Onboarding, mudanças e desligamentos auditáveis, combinando automações, simulações e tarefas manuais.",
     openGraph: {
-      title: "Guardião — Identity Control Plane",
-      description: "IAM, MDM e Zero Trust em um único plano operacional.",
-      images: [{ url: socialImage, width: 1536, height: 1024, alt: "Guardião Identity Control Plane" }],
+      title: "Guardião — Lifecycle de acessos",
+      description: "Controle admissões e desligamentos sem depender de planilha ou de uma suíte IGA enterprise.",
+      images: [{ url: socialImage, width: 1536, height: 1024, alt: "Guardião Lifecycle de acessos" }],
     },
     twitter: { card: "summary_large_image", images: [socialImage] },
   };

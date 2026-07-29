@@ -17,17 +17,20 @@ type InstalledApplication = { id: number; notebook_id: number; asset_tag: string
 type SoftwareCommand = { id: number; asset_tag: string; action: string; application_name: string; target_version?: string; justification: string; status: string; execution_mode: string; requested_by: string; result?: string; created_at: string };
 type WorkOrder = { id: number; asset_tag: string; model: string; order_type: string; status: string; assignee: string; due_at?: string; checklist: string; notes: string; created_at: string; completed_at?: string };
 type AssetEvent = { id: number; asset_tag: string; event_type: string; details: string; performed_by: string; created_at: string };
-type Overview = { users: User[]; profiles: Profile[]; tools: Tool[]; notebooks: Notebook[]; requests: AccessRequest[]; campaigns: Campaign[]; connectors: Connector[]; riskFindings: Risk[]; audit: Audit[]; admins: AdminAssignment[]; applications: InstalledApplication[]; softwareCommands: SoftwareCommand[]; workOrders: WorkOrder[]; assetEvents: AssetEvent[] };
+type LifecycleExecution = { id: number; user_id: number; user_name: string; email: string; execution_type: string; status: string; total_steps: number; verified_steps: number; attention_steps: number; created_at: string };
+type ExecutionStep = { id: number; execution_id: number; tool_id?: number; tool_name?: string; user_name: string; email: string; label: string; method: string; status: string; assignee: string; due_at?: string; attempts: number; result?: string; evidence?: string; error?: string };
+type AccessAssignment = { id: number; user_id: number; tool_id: number; user_name: string; email: string; tool_name: string; account_identifier?: string; expected_state: string; observed_state: string; verification_status: string; last_verified_at?: string };
+type Overview = { users: User[]; profiles: Profile[]; tools: Tool[]; notebooks: Notebook[]; requests: AccessRequest[]; campaigns: Campaign[]; connectors: Connector[]; riskFindings: Risk[]; audit: Audit[]; admins: AdminAssignment[]; applications: InstalledApplication[]; softwareCommands: SoftwareCommand[]; workOrders: WorkOrder[]; assetEvents: AssetEvent[]; executions: LifecycleExecution[]; executionSteps: ExecutionStep[]; accessAssignments: AccessAssignment[] };
 type ApiResult = { status?: string; message?: string; detail?: string; detalhe?: string; logs?: string[] };
 
-const emptyOverview: Overview = { users: [], profiles: [], tools: [], notebooks: [], requests: [], campaigns: [], connectors: [], riskFindings: [], audit: [], admins: [], applications: [], softwareCommands: [], workOrders: [], assetEvents: [] };
+const emptyOverview: Overview = { users: [], profiles: [], tools: [], notebooks: [], requests: [], campaigns: [], connectors: [], riskFindings: [], audit: [], admins: [], applications: [], softwareCommands: [], workOrders: [], assetEvents: [], executions: [], executionSteps: [], accessAssignments: [] };
 
 export default function Dashboard({ admin }: { admin: AdminUser }) {
   const [data, setData] = useState<Overview>(emptyOverview);
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<ApiResult | null>(null);
   const [selectedTools, setSelectedTools] = useState<number[]>([]);
-  const [tab, setTab] = useState<"people" | "profiles" | "inventory" | "applications" | "governance">("people");
+  const [tab, setTab] = useState<"people" | "profiles" | "lifecycle" | "inventory" | "applications" | "governance">("people");
   const [activeDialog, setActiveDialog] = useState<"people" | "profiles" | "inventory" | "applications" | "governance" | null>(null);
   const [pendingOffboard, setPendingOffboard] = useState<string | null>(null);
 
@@ -140,6 +143,19 @@ export default function Dashboard({ admin }: { admin: AdminUser }) {
     if (ok) formElement.reset();
   }
 
+  async function updateExecutionStep(event: FormEvent<HTMLFormElement>, stepId: number) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+    const action = (submitter?.value || "complete_manual") as "complete_manual" | "mark_failed" | "retry";
+    await submit("/api/v1/execution-steps", {
+      step_id: stepId,
+      action,
+      evidence: form.get("evidence"),
+      error: form.get("error"),
+    }, `step-${stepId}`);
+  }
+
   function toggleTheme() {
     const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
     document.documentElement.dataset.theme = next;
@@ -155,11 +171,12 @@ export default function Dashboard({ admin }: { admin: AdminUser }) {
     lost: "Extraviado",
   };
   const moduleMeta = {
-    people: { eyebrow: "Identidades / Pessoas", title: "Pessoas", highlight: "e ciclo de vida", copy: "Admissões, movimentações e desligamentos com acesso e equipamento no mesmo fluxo.", action: "Nova admissão", target: "people-action" },
+    people: { eyebrow: "Lifecycle / Pessoas", title: "Pessoas", highlight: "e acessos", copy: "Identidades independentes do equipamento, com perfil e estado de acesso conhecidos.", action: "Nova admissão", target: "people-action" },
     profiles: { eyebrow: "Identidades / Acessos", title: "Perfis", highlight: "e permissões", copy: "Perfis por área, menor privilégio e concessões previsíveis desde o primeiro dia.", action: "Novo perfil", target: "profiles-action" },
-    inventory: { eyebrow: "Dispositivos / Inventário", title: "Notebooks", highlight: "e custódia", copy: "Estoque, entrega, devolução, manutenção e preparação para o próximo ciclo.", action: "Adicionar ativo", target: "inventory-action" },
-    applications: { eyebrow: "Dispositivos / Software", title: "Aplicativos", highlight: "e políticas", copy: "Inventário, conformidade e execução administrativa auditável.", action: "Nova execução", target: "applications-action" },
-    governance: { eyebrow: "Controle / Governança", title: "Governança", highlight: "e auditoria", copy: "Aprovações, recertificações, riscos e evidências em uma fila operacional.", action: "Solicitar acesso", target: "governance-action" },
+    lifecycle: { eyebrow: "Lifecycle / Execuções", title: "Lifecycle", highlight: "verificável", copy: "Onboarding e offboarding decompostos por ferramenta, responsável, método e evidência.", action: null, target: "" },
+    inventory: { eyebrow: "Expansão / Workspace", title: "Workspace", highlight: "e dispositivos", copy: "Recursos opcionais associados à pessoa: notebooks, custódia, manutenção e software.", action: "Adicionar ativo", target: "inventory-action" },
+    applications: { eyebrow: "Lifecycle / Integrações", title: "Integrações", highlight: "e catálogo", copy: "Conectores catalogados e simulações claramente separados de integrações reais.", action: "Nova execução", target: "applications-action" },
+    governance: { eyebrow: "Controle / Pendências", title: "Pendências", highlight: "e evidências", copy: "Aprovações, riscos, recertificações e histórico auditável em uma fila operacional.", action: "Solicitar acesso", target: "governance-action" },
   }[tab];
 
   return (
@@ -174,7 +191,7 @@ export default function Dashboard({ admin }: { admin: AdminUser }) {
 
       <section className="hero compactHero moduleHero" id="top">
         <div className="pageIdentity"><p className="eyebrow">{moduleMeta.eyebrow}</p><h1>{moduleMeta.title} <em>{moduleMeta.highlight}</em></h1><p className="heroCopy">{moduleMeta.copy}</p></div>
-        <div className="pageActions"><span className="environmentState"><i /> Ambiente operacional</span><button className="primary compactAction" type="button" onClick={() => setActiveDialog(tab)}>+ {moduleMeta.action}</button></div>
+        <div className="pageActions"><span className="environmentState"><i /> Ambiente operacional</span>{moduleMeta.action && <button className="primary compactAction" type="button" onClick={() => setActiveDialog(tab as Exclude<typeof tab, "lifecycle">)}>+ {moduleMeta.action}</button>}</div>
         <div className="statusCard">
           <div className="pulse"><i /> POSTURA OPERACIONAL</div>
           <div className="metric"><strong>{activeUsers.length}</strong><span>identidades ativas</span></div>
@@ -186,18 +203,19 @@ export default function Dashboard({ admin }: { admin: AdminUser }) {
 
       {notice && <div className={`notice ${notice.detail ? "noticeDanger" : ""}`} role="status"><strong>{notice.message || notice.detail}</strong>{notice.detalhe && <span>{notice.detalhe}</span>}<button onClick={() => setNotice(null)} aria-label="Fechar">×</button></div>}
       {pendingOffboard && <div className="confirmBar" role="alert">
-        <div><strong>Confirmar offboarding?</strong><span>Todos os acessos de {pendingOffboard} serão revogados e uma devolução física será aberta para o notebook.</span></div>
-        <div><button className="cancelAction" onClick={() => setPendingOffboard(null)}>Cancelar</button><button className="confirmAction" onClick={() => offboard(pendingOffboard)} disabled={busy !== null}>{busy ? "Revogando…" : "Confirmar revogação"}</button></div>
+        <div><strong>Criar plano de desligamento?</strong><span>O Guardião criará etapas por ferramenta e, quando aplicável, a devolução do endpoint. Nenhuma revogação será declarada sem verificação.</span></div>
+        <div><button className="cancelAction" onClick={() => setPendingOffboard(null)}>Cancelar</button><button className="confirmAction" onClick={() => offboard(pendingOffboard)} disabled={busy !== null}>{busy ? "Criando plano…" : "Criar plano"}</button></div>
       </div>}
 
       <nav className="moduleTabs" aria-label="Módulos">
-        <p>OPERAÇÃO</p>
-        <button className={tab === "people" ? "active" : ""} onClick={() => setTab("people")}><span className="navIcon">P</span><span><strong>Pessoas</strong><small>Entrada e desligamento</small></span></button>
-        <button className={tab === "profiles" ? "active" : ""} onClick={() => setTab("profiles")}><span className="navIcon">A</span><span><strong>Acessos</strong><small>Perfis e permissões</small></span></button>
-        <button className={tab === "inventory" ? "active" : ""} onClick={() => setTab("inventory")}><span className="navIcon">N</span><span><strong>Ativos</strong><small>Notebooks e compliance</small></span></button>
-        <button className={tab === "applications" ? "active" : ""} onClick={() => setTab("applications")}><span className="navIcon">S</span><span><strong>Aplicativos</strong><small>Inventário e execução</small></span><b>{data.applications.filter((item) => item.policy_status === "prohibited").length}</b></button>
-        <p>CONTROLE</p>
-        <button className={tab === "governance" ? "active" : ""} onClick={() => setTab("governance")}><span className="navIcon">G</span><span><strong>Governança</strong><small>Decisões, riscos e auditoria</small></span><b>{data.requests.filter((item) => item.status === "pending").length}</b></button>
+        <p>PRINCIPAL</p>
+        <button className={tab === "people" ? "active" : ""} onClick={() => setTab("people")}><span className="navIcon">P</span><span><strong>Pessoas</strong><small>Identidades e acessos</small></span></button>
+        <button className={tab === "profiles" ? "active" : ""} onClick={() => setTab("profiles")}><span className="navIcon">R</span><span><strong>Perfis</strong><small>Ferramentas esperadas</small></span></button>
+        <button className={tab === "lifecycle" ? "active" : ""} onClick={() => setTab("lifecycle")}><span className="navIcon">L</span><span><strong>Lifecycle</strong><small>Execuções e etapas</small></span><b>{data.executionSteps.filter((item) => item.status !== "VERIFIED").length}</b></button>
+        <button className={tab === "governance" ? "active" : ""} onClick={() => setTab("governance")}><span className="navIcon">E</span><span><strong>Pendências</strong><small>Decisões e evidências</small></span><b>{data.requests.filter((item) => item.status === "pending").length}</b></button>
+        <p>EXPANSÃO</p>
+        <button className={tab === "applications" ? "active" : ""} onClick={() => setTab("applications")}><span className="navIcon">I</span><span><strong>Integrações</strong><small>Catálogo e software</small></span></button>
+        <button className={tab === "inventory" ? "active" : ""} onClick={() => setTab("inventory")}><span className="navIcon">W</span><span><strong>Workspace</strong><small>Dispositivos opcionais</small></span></button>
       </nav>
 
       {activeDialog && <button className="drawerBackdrop" type="button" onClick={() => setActiveDialog(null)} aria-label="Fechar painel" />}
@@ -205,19 +223,19 @@ export default function Dashboard({ admin }: { admin: AdminUser }) {
       {tab === "people" && <section className="module">
         <div className={`panel onboardingPanel actionDrawer ${activeDialog === "people" ? "open" : ""}`} id="people-action">
           <div className="panelHeading"><span className="step">01</span><div><p>ENTRADA DE COLABORADOR</p><h2>Provisionar por perfil</h2></div><button className="drawerClose" type="button" onClick={() => setActiveDialog(null)} aria-label="Fechar">×</button></div>
-          <p className="panelCopy">Ao selecionar o perfil, todas as ferramentas permitidas para aquela área são concedidas automaticamente.</p>
+          <p className="panelCopy">Ao selecionar o perfil, o Guardião cria um plano de provisionamento por ferramenta. O acesso só muda para verificado após evidência.</p>
           <div className="flowRail"><span className="done">Identidade</span><i /><span>Perfil</span><i /><span>Notebook</span><i /><span>Acessos</span><i /><span>Concluído</span></div>
-          {data.profiles.length === 0 || available.length === 0 ? <div className="callout">Cadastre pelo menos um perfil e um notebook disponível antes de provisionar.</div> :
+          {data.profiles.length === 0 ? <div className="callout">Cadastre pelo menos um perfil antes de criar o plano de onboarding.</div> :
           <form onSubmit={onboarding}>
             <div className="formRow"><label>Nome completo<input name="name" placeholder="Marina Costa" required /></label><label>E-mail corporativo<input name="email" type="email" placeholder="marina@empresa.com" required /></label></div>
             <div className="formRow"><label>Perfil da área<select name="profile_id" required defaultValue=""><option value="" disabled>Selecione o perfil</option>{data.profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name} · {(profile.tool_names || "").split("|||").filter(Boolean).length} ferramentas</option>)}</select></label>
-            <label>Notebook disponível<select name="notebook_id" required defaultValue=""><option value="" disabled>Selecione o ativo</option>{available.map((notebook) => <option key={notebook.id} value={notebook.id}>{notebook.asset_tag} · {notebook.model}</option>)}</select></label></div>
-            <button className="primary" disabled={busy !== null}>{busy === "onboarding" ? "Provisionando…" : "Criar identidade e conceder acessos"}<span>→</span></button>
+            <label>Workspace ou notebook (opcional)<select name="notebook_id" defaultValue=""><option value="">Sem equipamento vinculado</option>{available.map((notebook) => <option key={notebook.id} value={notebook.id}>{notebook.asset_tag} · {notebook.model}</option>)}</select></label></div>
+            <button className="primary" disabled={busy !== null}>{busy === "onboarding" ? "Criando plano…" : "Criar plano de onboarding"}<span>→</span></button>
           </form>}
         </div>
         <div className="registry embedded">
           <div className="registryHead"><div><p className="eyebrow">DIRETÓRIO</p><h2>Colaboradores</h2></div><span>{activeUsers.length} ativos</span></div>
-          {data.users.length === 0 ? <div className="empty">Nenhum colaborador provisionado.</div> : <div className="tableWrap"><table><thead><tr><th>Colaborador</th><th>Perfil</th><th>Notebook</th><th>Estado</th><th /></tr></thead><tbody>{data.users.map((user) => <tr key={user.id}><td><strong>{user.name}</strong><small>{user.email}</small></td><td><span className="profileDot" style={{ background: user.profile_color || "#6d756f" }} />{user.profile_name || "Legado"}</td><td>{user.asset_tag ? <><strong>{user.asset_tag}</strong><small>{user.model}</small></> : "—"}</td><td><span className={`badge ${user.status}`}>{user.status === "active" ? "Ativo" : "Suspenso"}</span></td><td>{user.status === "active" && <button className="rowAction" disabled={busy !== null} onClick={() => setPendingOffboard(user.email)}>Revogar</button>}</td></tr>)}</tbody></table></div>}
+          {data.users.length === 0 ? <div className="empty">Nenhuma pessoa cadastrada.</div> : <div className="tableWrap"><table><thead><tr><th>Pessoa</th><th>Perfil</th><th>Workspace</th><th>Estado lifecycle</th><th /></tr></thead><tbody>{data.users.map((user) => <tr key={user.id}><td><strong>{user.name}</strong><small>{user.email}</small></td><td><span className="profileDot" style={{ background: user.profile_color || "#6d756f" }} />{user.profile_name || "Sem perfil"}</td><td>{user.asset_tag ? <><strong>{user.asset_tag}</strong><small>{user.model}</small></> : <span className="mutedValue">Sem equipamento</span>}</td><td><span className={`badge ${user.status}`}>{user.status === "active" ? "Ativo" : user.status === "onboarding" ? "Onboarding" : user.status === "offboarding" ? "Offboarding" : "Suspenso"}</span></td><td>{user.status === "active" && <button className="rowAction" disabled={busy !== null} onClick={() => setPendingOffboard(user.email)}>Desligar</button>}</td></tr>)}</tbody></table></div>}
         </div>
       </section>}
 
@@ -237,6 +255,44 @@ export default function Dashboard({ admin }: { admin: AdminUser }) {
             <div className="profileCardHead"><div><p className="eyebrow">PERFIL DE ACESSO</p><h3>{profile.name}</h3></div><strong>{profile.members}<small>pessoas</small></strong></div>
             <p>{profile.description}</p><div className="chips">{(profile.entitlements || profile.tool_names || "").split("|||").filter(Boolean).map((item) => { const [tool, role, scope] = item.split("::"); return <span key={item}>{tool}{role && <small>{role} · {scope}</small>}</span>; })}</div>
           </article>)}
+        </div>
+      </section>}
+
+      {tab === "lifecycle" && <section className="module lifecycleModule">
+        <div className="lifecycleStats">
+          <div><strong>{data.executions.filter((item) => item.status === "RUNNING").length}</strong><span>Em execução</span></div>
+          <div><strong>{data.executionSteps.filter((item) => ["PLANNED", "WAITING"].includes(item.status)).length}</strong><span>Etapas pendentes</span></div>
+          <div><strong>{data.executionSteps.filter((item) => item.status === "FAILED").length}</strong><span>Falhas abertas</span></div>
+          <div><strong>{data.executionSteps.filter((item) => item.status === "VERIFIED").length}</strong><span>Verificadas</span></div>
+        </div>
+        <div className="registry embedded">
+          <div className="registryHead"><div><p className="eyebrow">EXECUÇÕES</p><h2>Planos de lifecycle</h2></div><span>{data.executions.length} planos</span></div>
+          {data.executions.length === 0 ? <div className="empty">Crie um onboarding ou desligamento para gerar o primeiro plano.</div> :
+          <div className="executionList">{data.executions.map((execution) => <article key={execution.id} className="executionRow">
+            <div><span className={`executionType ${execution.execution_type.toLowerCase()}`}>{execution.execution_type}</span><strong>{execution.user_name}</strong><small>{execution.email}</small></div>
+            <div className="executionProgress"><span><b>{execution.verified_steps}</b> de {execution.total_steps} verificadas</span><i><em style={{ width: `${execution.total_steps ? (execution.verified_steps / execution.total_steps) * 100 : 0}%` }} /></i></div>
+            <span className={`executionStatus ${execution.status.toLowerCase()}`}>{execution.status}</span>
+          </article>)}</div>}
+        </div>
+        <div className="registry embedded">
+          <div className="registryHead"><div><p className="eyebrow">PLANO OPERACIONAL</p><h2>Etapas por ferramenta</h2></div><span>evidência individual</span></div>
+          {data.executionSteps.length === 0 ? <div className="empty">Nenhuma etapa pendente.</div> :
+          <div className="stepBoard">{data.executionSteps.map((step) => <article key={step.id} className={`executionStep ${step.status.toLowerCase()}`}>
+            <div className="stepMain"><span className={`methodTag ${step.method.toLowerCase()}`}>{step.method}</span><div><strong>{step.label}</strong><small>{step.user_name} · {step.assignee}</small></div><span className={`stepStatus ${step.status.toLowerCase()}`}>{step.status}</span></div>
+            {(step.result || step.error || step.evidence) && <div className="stepContext">{step.result && <span>{step.result}</span>}{step.error && <b>{step.error}</b>}{step.evidence && <small>Evidência: {step.evidence}</small>}</div>}
+            {step.status !== "VERIFIED" && <form className="stepActionForm" onSubmit={(event) => updateExecutionStep(event, step.id)}>
+              <input name="evidence" aria-label={`Evidência para ${step.label}`} placeholder="Evidência ou referência do chamado" />
+              <input name="error" aria-label={`Erro em ${step.label}`} placeholder="Erro encontrado, se houver" />
+              <button className="secondary" name="action" value="complete_manual" disabled={busy !== null}>Concluir manualmente</button>
+              <button className="rowAction" name="action" value="mark_failed" disabled={busy !== null}>Registrar falha</button>
+              {step.status === "FAILED" && <button className="rowAction" name="action" value="retry" disabled={busy !== null}>Replanejar</button>}
+            </form>}
+          </article>)}</div>}
+        </div>
+        <div className="registry embedded">
+          <div className="registryHead"><div><p className="eyebrow">INVENTÁRIO DE ACESSOS</p><h2>Esperado × observado</h2></div><span>{data.accessAssignments.length} atribuições</span></div>
+          {data.accessAssignments.length === 0 ? <div className="empty">Os acessos planejados aparecerão após um onboarding ou aprovação.</div> :
+          <div className="tableWrap"><table><thead><tr><th>Pessoa</th><th>Ferramenta</th><th>Conta</th><th>Esperado</th><th>Observado</th><th>Verificação</th></tr></thead><tbody>{data.accessAssignments.map((assignment) => <tr key={assignment.id}><td><strong>{assignment.user_name}</strong><small>{assignment.email}</small></td><td>{assignment.tool_name}</td><td>{assignment.account_identifier || "Planejada"}</td><td><span className="stateValue">{assignment.expected_state}</span></td><td><span className="stateValue observed">{assignment.observed_state}</span></td><td><span className={`verification ${assignment.verification_status}`}>{assignment.verification_status}</span><small>{assignment.last_verified_at ? new Date(assignment.last_verified_at).toLocaleString("pt-BR") : "Nunca verificado"}</small></td></tr>)}</tbody></table></div>}
         </div>
       </section>}
 
@@ -356,12 +412,12 @@ export default function Dashboard({ admin }: { admin: AdminUser }) {
           {data.requests.length === 0 ? <div className="empty">Nenhuma solicitação registrada.</div> : <div className="tableWrap"><table><thead><tr><th>Colaborador</th><th>Acesso solicitado</th><th>Justificativa</th><th>Status</th><th>Decisão</th></tr></thead><tbody>{data.requests.map((request) => <tr key={request.id}><td><strong>{request.user_name}</strong><small>{request.email}</small></td><td>{request.tool_name}<small>{request.requested_role}</small></td><td>{request.justification}</td><td><span className={`requestStatus ${request.status}`}>{request.status}</span></td><td>{request.status === "pending" && <div className="decisionButtons"><button onClick={() => submit("/api/v1/access-decisions", {request_id: request.id, decision:"approved"}, `approve-${request.id}`)}>Aprovar</button><button onClick={() => submit("/api/v1/access-decisions", {request_id: request.id, decision:"rejected"}, `reject-${request.id}`)}>Rejeitar</button></div>}</td></tr>)}</tbody></table></div>}
         </div>
 
-        <div className="connectorSection"><div className="registryHead"><div><p className="eyebrow">INTEGRATION HUB</p><h2>Portas abertas para a empresa</h2></div><span>sem credenciais · nenhuma chamada externa</span></div><div className="connectorGrid">{data.connectors.map((connector) => <article key={connector.id}><span className="connectorIcon">{connector.name[0]}</span><div><strong>{connector.name}</strong><small>{connector.category} · {connector.auth_type}</small><p>{connector.description}</p></div><b>Preparado</b></article>)}</div></div>
+        <div className="connectorSection"><div className="registryHead"><div><p className="eyebrow">CATÁLOGO DE INTEGRAÇÕES</p><h2>Conectores disponíveis</h2></div><span>sem credenciais · nenhuma chamada externa</span></div><div className="connectorGrid">{data.connectors.map((connector) => <article key={connector.id}><span className="connectorIcon">{connector.name[0]}</span><div><strong>{connector.name}</strong><small>{connector.category} · {connector.auth_type}</small><p>{connector.description}</p></div><b>{connector.status === "CATALOG_ONLY" ? "Somente catálogo" : connector.status}</b></article>)}</div></div>
 
-        <div className="registry embedded auditTable"><div className="registryHead"><div><p className="eyebrow">EVIDÊNCIAS</p><h2>Auditoria imutável</h2></div><span>{data.audit.length} eventos recentes</span></div><div className="tableWrap"><table><thead><tr><th>Data</th><th>Ação</th><th>Alvo</th><th>Evidência</th></tr></thead><tbody>{data.audit.map((event) => <tr key={event.id}><td>{new Date(event.created_at).toLocaleString("pt-BR")}</td><td><code>{event.action_type}</code></td><td>{event.target_user}</td><td><small>{event.details}</small></td></tr>)}</tbody></table></div></div>
+        <div className="registry embedded auditTable"><div className="registryHead"><div><p className="eyebrow">EVIDÊNCIAS</p><h2>Histórico auditável de ações</h2></div><span>{data.audit.length} eventos recentes</span></div><div className="tableWrap"><table><thead><tr><th>Data</th><th>Ação</th><th>Alvo</th><th>Evidência</th></tr></thead><tbody>{data.audit.map((event) => <tr key={event.id}><td>{new Date(event.created_at).toLocaleString("pt-BR")}</td><td><code>{event.action_type}</code></td><td>{event.target_user}</td><td><small>{event.details}</small></td></tr>)}</tbody></table></div></div>
       </section>}
 
-      <footer><span>GUARDIÃO · Enterprise IAM & MDM</span><span>Governança · Riscos · Evidências · Conectores preparados</span></footer>
+      <footer><span>GUARDIÃO · Lifecycle de acessos</span><span>Onboarding · Mudanças · Offboarding · Evidências</span></footer>
     </main>
   );
 }

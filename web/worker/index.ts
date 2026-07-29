@@ -4,6 +4,7 @@ import handler from "vinext/server/app-router-entry";
 interface Env {
   ASSETS: Fetcher;
   DB: D1Database;
+  GUARDIAO_BOOTSTRAP_ADMIN_EMAILS?: string;
   IMAGES: {
     input(stream: ReadableStream): {
       transform(options: Record<string, unknown>): {
@@ -27,7 +28,7 @@ async function initialize(db: D1Database) {
   await db.batch([
     db.prepare(`CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT NOT NULL UNIQUE,
-      department TEXT NOT NULL, device_serial TEXT NOT NULL UNIQUE, status TEXT NOT NULL DEFAULT 'active',
+      department TEXT NOT NULL, device_serial TEXT UNIQUE, status TEXT NOT NULL DEFAULT 'active',
       created_at TEXT NOT NULL, profile_id INTEGER, notebook_id INTEGER
     )`),
     db.prepare(`CREATE TABLE IF NOT EXISTS audit_logs (
@@ -69,7 +70,7 @@ async function initialize(db: D1Database) {
     )`),
     db.prepare(`CREATE TABLE IF NOT EXISTS connectors (
       id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, category TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'ready', auth_type TEXT NOT NULL, description TEXT NOT NULL
+      status TEXT NOT NULL DEFAULT 'CATALOG_ONLY', auth_type TEXT NOT NULL, description TEXT NOT NULL
     )`),
     db.prepare(`CREATE TABLE IF NOT EXISTS asset_events (
       id INTEGER PRIMARY KEY AUTOINCREMENT, notebook_id INTEGER NOT NULL, event_type TEXT NOT NULL,
@@ -95,6 +96,32 @@ async function initialize(db: D1Database) {
       application_name TEXT NOT NULL, target_version TEXT, justification TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'queued', execution_mode TEXT NOT NULL DEFAULT 'simulated',
       requested_by TEXT NOT NULL, result TEXT, created_at TEXT NOT NULL, completed_at TEXT
+    )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS identity_accounts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, tool_id INTEGER NOT NULL,
+      account_identifier TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'planned',
+      observed_status TEXT NOT NULL DEFAULT 'unknown', last_verified_at TEXT, created_at TEXT NOT NULL,
+      UNIQUE(user_id, tool_id)
+    )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS access_assignments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, tool_id INTEGER NOT NULL,
+      account_id INTEGER, source_type TEXT NOT NULL DEFAULT 'profile', source_id INTEGER,
+      expected_state TEXT NOT NULL, observed_state TEXT NOT NULL DEFAULT 'unknown',
+      verification_status TEXT NOT NULL DEFAULT 'unverified', last_verified_at TEXT,
+      created_at TEXT NOT NULL, updated_at TEXT NOT NULL, UNIQUE(user_id, tool_id)
+    )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS lifecycle_executions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, execution_type TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'PLANNED', requested_by TEXT NOT NULL, started_at TEXT,
+      completed_at TEXT, created_at TEXT NOT NULL
+    )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS execution_steps (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, execution_id INTEGER NOT NULL, tool_id INTEGER,
+      step_key TEXT NOT NULL, label TEXT NOT NULL, method TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'PLANNED', assignee TEXT NOT NULL, due_at TEXT,
+      attempts INTEGER NOT NULL DEFAULT 0, result TEXT, verification_method TEXT,
+      evidence TEXT, error TEXT, started_at TEXT, completed_at TEXT, created_at TEXT NOT NULL,
+      UNIQUE(execution_id, step_key)
     )`),
   ]);
 
@@ -127,6 +154,7 @@ async function initialize(db: D1Database) {
     db.prepare("INSERT OR IGNORE INTO connectors (name, category, auth_type, description) VALUES ('Intune / MDM', 'Dispositivos', 'OAuth 2.0', 'Compliance, bloqueio e inventário')"),
     db.prepare("INSERT OR IGNORE INTO connectors (name, category, auth_type, description) VALUES ('RH / Folha', 'Pessoas', 'Webhook assinado', 'Admissão, movimentação e desligamento')"),
     db.prepare("INSERT OR IGNORE INTO connectors (name, category, auth_type, description) VALUES ('Service Desk', 'Workflow', 'API Token', 'Chamados, aprovações e evidências')"),
+    db.prepare("UPDATE connectors SET status='CATALOG_ONLY' WHERE status IN ('ready', 'Preparado')"),
     db.prepare(`INSERT INTO installed_applications (notebook_id, name, version, publisher, policy_status, source, detected_at)
       SELECT n.id, 'Microsoft 365 Apps', '2406', 'Microsoft', 'allowed', 'demo', datetime('now')
       FROM notebooks n WHERE n.id=(SELECT MIN(id) FROM notebooks) AND NOT EXISTS (
@@ -143,10 +171,18 @@ async function initialize(db: D1Database) {
         SELECT 1 FROM installed_applications ia WHERE ia.notebook_id=n.id AND ia.name='AnyDesk'
       )`),
   ]);
+
+  await db.batch([
+    db.prepare("UPDATE admin_assignments SET permissions='all' WHERE role='Superadministrador'"),
+    db.prepare("UPDATE admin_assignments SET permissions='people:onboard,people:offboard,profiles:write,access:request,access:approve,reviews:manage,lifecycle:execute,audit:read' WHERE role='Administrador IAM'"),
+    db.prepare("UPDATE admin_assignments SET permissions='access:request,access:approve,reviews:manage,lifecycle:execute,audit:read' WHERE role='Gestor de área'"),
+    db.prepare("UPDATE admin_assignments SET permissions='assets:manage,software:manage,audit:read' WHERE role='Gestor de ativos'"),
+    db.prepare("UPDATE admin_assignments SET permissions='audit:read' WHERE role='Auditor'"),
+  ]);
 }
 
 async function overview(db: D1Database) {
-  const [users, profiles, tools, notebooks, requests, campaigns, connectors, audit, admins, assetEvents, applications, softwareCommands, workOrders] = await Promise.all([
+  const [users, profiles, tools, notebooks, requests, campaigns, connectors, audit, admins, assetEvents, applications, softwareCommands, workOrders, executions, executionSteps, accessAssignments] = await Promise.all([
     db.prepare(`SELECT u.id, u.name, u.email, u.department, u.device_serial, u.status, u.profile_id,
       p.name AS profile_name, p.color AS profile_color, n.id AS notebook_id, n.asset_tag, n.model
       FROM users u LEFT JOIN profiles p ON p.id = u.profile_id
@@ -179,6 +215,18 @@ async function overview(db: D1Database) {
       JOIN notebooks n ON n.id=sc.notebook_id ORDER BY sc.id DESC LIMIT 30`).all(),
     db.prepare(`SELECT wo.*, n.asset_tag, n.model FROM asset_work_orders wo
       JOIN notebooks n ON n.id=wo.notebook_id ORDER BY CASE wo.status WHEN 'open' THEN 0 ELSE 1 END, wo.id DESC LIMIT 50`).all(),
+    db.prepare(`SELECT le.*, u.name AS user_name, u.email,
+      (SELECT COUNT(*) FROM execution_steps es WHERE es.execution_id=le.id) AS total_steps,
+      (SELECT COUNT(*) FROM execution_steps es WHERE es.execution_id=le.id AND es.status='VERIFIED') AS verified_steps,
+      (SELECT COUNT(*) FROM execution_steps es WHERE es.execution_id=le.id AND es.status IN ('FAILED','WAITING')) AS attention_steps
+      FROM lifecycle_executions le JOIN users u ON u.id=le.user_id ORDER BY le.id DESC LIMIT 30`).all(),
+    db.prepare(`SELECT es.*, t.name AS tool_name, u.name AS user_name, u.email
+      FROM execution_steps es JOIN lifecycle_executions le ON le.id=es.execution_id
+      JOIN users u ON u.id=le.user_id LEFT JOIN tools t ON t.id=es.tool_id
+      ORDER BY CASE es.status WHEN 'FAILED' THEN 0 WHEN 'WAITING' THEN 1 WHEN 'PLANNED' THEN 2 ELSE 3 END, es.id DESC LIMIT 100`).all(),
+    db.prepare(`SELECT aa.*, t.name AS tool_name, ia.account_identifier, u.name AS user_name, u.email
+      FROM access_assignments aa JOIN users u ON u.id=aa.user_id JOIN tools t ON t.id=aa.tool_id
+      LEFT JOIN identity_accounts ia ON ia.id=aa.account_id ORDER BY u.name, t.name`).all(),
   ]);
   const riskFindings = [
     ...notebooks.results.filter((item) => !Number((item as Record<string, unknown>).encrypted)).map((item) => ({ severity: "high", title: "Notebook sem criptografia", subject: (item as Record<string, unknown>).asset_tag, recommendation: "Habilitar criptografia antes da próxima atribuição." })),
@@ -189,7 +237,36 @@ async function overview(db: D1Database) {
   return { users: users.results, profiles: profiles.results, tools: tools.results, notebooks: notebooks.results,
     requests: requests.results, campaigns: campaigns.results, connectors: connectors.results, audit: audit.results,
     admins: admins.results, assetEvents: assetEvents.results, applications: applications.results,
-    softwareCommands: softwareCommands.results, workOrders: workOrders.results, riskFindings };
+    softwareCommands: softwareCommands.results, workOrders: workOrders.results, executions: executions.results,
+    executionSteps: executionSteps.results, accessAssignments: accessAssignments.results, riskFindings };
+}
+
+const routePermissions: Record<string, string> = {
+  "/api/v1/profiles": "profiles:write",
+  "/api/v1/notebooks": "assets:manage",
+  "/api/v1/onboarding": "people:onboard",
+  "/api/v1/offboarding": "people:offboard",
+  "/api/v1/access-requests": "access:request",
+  "/api/v1/access-decisions": "access:approve",
+  "/api/v1/recertifications": "reviews:manage",
+  "/api/v1/admin-assignments": "admin:manage",
+  "/api/v1/asset-lifecycle": "assets:manage",
+  "/api/v1/asset-events": "assets:manage",
+  "/api/v1/software-commands": "software:manage",
+  "/api/v1/execution-steps": "lifecycle:execute",
+};
+
+const rolePermissions: Record<string, string> = {
+  "Superadministrador": "all",
+  "Administrador IAM": "people:onboard,people:offboard,profiles:write,access:request,access:approve,reviews:manage,lifecycle:execute,audit:read",
+  "Gestor de área": "access:request,access:approve,reviews:manage,lifecycle:execute,audit:read",
+  "Gestor de ativos": "assets:manage,software:manage,audit:read",
+  "Auditor": "audit:read",
+};
+
+function hasPermission(granted: string, required: string) {
+  if (granted === "all") return true;
+  return granted.split(",").map((item) => item.trim()).includes(required);
 }
 
 async function api(request: Request, env: Env) {
@@ -199,6 +276,11 @@ async function api(request: Request, env: Env) {
   await initialize(env.DB);
   const adminCount = await env.DB.prepare("SELECT COUNT(*) AS total FROM admin_assignments").first<{ total: number }>();
   if (!adminCount?.total) {
+    const allowedBootstrap = String(env.GUARDIAO_BOOTSTRAP_ADMIN_EMAILS || "")
+      .split(",").map((email) => email.trim().toLowerCase()).filter(Boolean);
+    if (!allowedBootstrap.includes(authenticatedEmail.toLowerCase())) {
+      return json({ detail: "Administração ainda não inicializada. Autorize este e-mail em GUARDIAO_BOOTSTRAP_ADMIN_EMAILS." }, 403);
+    }
     await env.DB.prepare("INSERT INTO admin_assignments (email, role, permissions, status) VALUES (?, 'Superadministrador', 'all', 'active')")
       .bind(authenticatedEmail).run();
   }
@@ -207,7 +289,12 @@ async function api(request: Request, env: Env) {
   if (!currentAdmin || currentAdmin.status !== "active") return json({ detail: "Usuário autenticado sem função administrativa ativa." }, 403);
   const url = new URL(request.url);
 
-  if (request.method === "GET" && url.pathname === "/api/v1/overview") return json(await overview(env.DB));
+  if (request.method === "GET" && url.pathname === "/api/v1/overview") {
+    if (!hasPermission(currentAdmin.permissions, "audit:read") && currentAdmin.permissions !== "all") {
+      return json({ detail: "Seu perfil administrativo não permite consultar o painel." }, 403);
+    }
+    return json(await overview(env.DB));
+  }
 
   if (request.method === "GET" && url.pathname.startsWith("/api/v1/agent/status/")) {
     const serial = decodeURIComponent(url.pathname.split("/").pop() || "");
@@ -219,6 +306,10 @@ async function api(request: Request, env: Env) {
   if (request.method !== "POST") return json({ detail: "Método não permitido." }, 405);
   const body = await request.json() as Record<string, unknown>;
   const now = new Date().toISOString();
+  const requiredPermission = routePermissions[url.pathname];
+  if (requiredPermission && !hasPermission(currentAdmin.permissions, requiredPermission)) {
+    return json({ detail: `Permissão necessária: ${requiredPermission}.` }, 403);
+  }
 
   if (url.pathname === "/api/v1/profiles") {
     const name = String(body.name || "").trim();
@@ -259,46 +350,105 @@ async function api(request: Request, env: Env) {
 
   if (url.pathname === "/api/v1/onboarding") {
     const profileId = Number(body.profile_id);
-    const notebookId = Number(body.notebook_id);
+    const notebookId = body.notebook_id ? Number(body.notebook_id) : null;
     const profile = await env.DB.prepare("SELECT id, name FROM profiles WHERE id = ?").bind(profileId).first<{ id: number; name: string }>();
-    const notebook = await env.DB.prepare("SELECT id, serial, status FROM notebooks WHERE id = ?").bind(notebookId).first<{ id: number; serial: string; status: string }>();
-    if (!profile || !notebook || notebook.status !== "available") return json({ detail: "Selecione um perfil válido e um notebook disponível." }, 400);
+    const notebook = notebookId
+      ? await env.DB.prepare("SELECT id, serial, status FROM notebooks WHERE id = ?").bind(notebookId).first<{ id: number; serial: string; status: string }>()
+      : null;
+    if (!profile || (notebookId && (!notebook || notebook.status !== "available"))) {
+      return json({ detail: "Selecione um perfil válido e, se necessário, um notebook disponível." }, 400);
+    }
     const name = String(body.name || "").trim();
     const email = String(body.email || "").trim().toLowerCase();
     if (!name || !email) return json({ detail: "Preencha nome e e-mail." }, 400);
     try {
-      await env.DB.batch([
-        env.DB.prepare(`INSERT INTO users (name, email, department, device_serial, profile_id, notebook_id, status, created_at)
-          VALUES (?, ?, ?, ?, ?, ?, 'active', ?)`).bind(name, email, profile.name, notebook.serial, profile.id, notebook.id, now),
-        env.DB.prepare("UPDATE notebooks SET status = 'preparing', custody_location = 'Bancada de preparação' WHERE id = ? AND status = 'available'").bind(notebook.id),
-        env.DB.prepare(`INSERT INTO asset_work_orders
-          (notebook_id, order_type, status, assignee, due_at, checklist, notes, created_by, created_at)
-          VALUES (?, 'onboarding_preparation', 'open', 'Equipe de TI', NULL, ?, ?, ?, ?)`)
-          .bind(notebook.id, JSON.stringify(["Inspeção física", "Formatação segura", "Imagem corporativa", "Criptografia", "Agente Guardião", "Aplicativos do perfil", "Testes funcionais"]),
-            `Preparar para ${name}`, authenticatedEmail, now),
-        env.DB.prepare("INSERT INTO audit_logs (target_user, action_type, details, created_at) VALUES (?, 'onboarding', ?, ?)")
-          .bind(email, JSON.stringify({ profile: profile.name, notebook: notebook.serial }), now),
+      const createdUser = await env.DB.prepare(`INSERT INTO users
+        (name, email, department, device_serial, profile_id, notebook_id, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, 'onboarding', ?) RETURNING id`)
+        .bind(name, email, profile.name, notebook?.serial || null, profile.id, notebook?.id || null, now).first<{ id: number }>();
+      if (!createdUser) throw new Error("user");
+      const execution = await env.DB.prepare(`INSERT INTO lifecycle_executions
+        (user_id, execution_type, status, requested_by, started_at, created_at)
+        VALUES (?, 'ONBOARDING', 'RUNNING', ?, ?, ?) RETURNING id`)
+        .bind(createdUser.id, authenticatedEmail, now, now).first<{ id: number }>();
+      if (!execution) throw new Error("execution");
+      const access = await env.DB.prepare(`SELECT t.id, t.name FROM tools t JOIN profile_tools pt ON pt.tool_id=t.id
+        WHERE pt.profile_id=? ORDER BY t.name`).bind(profile.id).all<{ id: number; name: string }>();
+      const statements = access.results.flatMap((tool) => [
+        env.DB.prepare(`INSERT INTO identity_accounts
+          (user_id, tool_id, account_identifier, status, observed_status, created_at)
+          VALUES (?, ?, ?, 'planned', 'unknown', ?)`).bind(createdUser.id, tool.id, email, now),
+        env.DB.prepare(`INSERT INTO access_assignments
+          (user_id, tool_id, source_type, source_id, expected_state, observed_state, verification_status, created_at, updated_at)
+          VALUES (?, ?, 'profile', ?, 'active', 'unknown', 'unverified', ?, ?)`)
+          .bind(createdUser.id, tool.id, profile.id, now, now),
+        env.DB.prepare(`INSERT INTO execution_steps
+          (execution_id, tool_id, step_key, label, method, status, assignee, attempts, verification_method, created_at)
+          VALUES (?, ?, ?, ?, 'SIMULATED', 'PLANNED', 'Equipe de TI', 0, 'Confirmação manual ou conector', ?)`)
+          .bind(execution.id, tool.id, `provision:${tool.id}`, `Provisionar ${tool.name}`, now),
       ]);
-      const access = await env.DB.prepare(`SELECT t.name FROM tools t JOIN profile_tools pt ON pt.tool_id = t.id WHERE pt.profile_id = ? ORDER BY t.name`).bind(profile.id).all<{ name: string }>();
+      statements.push(
+        env.DB.prepare(`INSERT INTO execution_steps
+          (execution_id, step_key, label, method, status, assignee, attempts, verification_method, created_at)
+          VALUES (?, 'identity:create', 'Criar identidade central', 'SIMULATED', 'PLANNED', 'Equipe de Identidade', 0, 'Confirmação manual ou diretório', ?)`)
+          .bind(execution.id, now),
+        env.DB.prepare("INSERT INTO audit_logs (target_user, action_type, details, created_at) VALUES (?, 'onboarding_plan_created', ?, ?)")
+          .bind(email, JSON.stringify({ execution_id: execution.id, profile: profile.name, notebook: notebook?.serial || null, mode: "planned" }), now),
+      );
+      if (notebook) {
+        statements.push(
+          env.DB.prepare("UPDATE notebooks SET status='preparing', custody_location='Bancada de preparação' WHERE id=? AND status='available'").bind(notebook.id),
+          env.DB.prepare(`INSERT INTO execution_steps
+            (execution_id, step_key, label, method, status, assignee, attempts, verification_method, created_at)
+            VALUES (?, 'endpoint:prepare', 'Preparar e entregar notebook', 'MANUAL', 'PLANNED', 'Equipe de TI', 0, 'Checklist físico', ?)`)
+            .bind(execution.id, now),
+        );
+      }
+      await env.DB.batch(statements);
       return json({
         status: "sucesso",
-        message: `${name} entrou no perfil ${profile.name}.`,
-        detalhe: `${access.results.length} acessos concedidos automaticamente.`,
-        logs: access.results.map((tool) => `${tool.name}: acesso concedido.`),
+        message: `Plano de onboarding criado para ${name}.`,
+        detalhe: `${access.results.length} acessos planejados; nenhum foi marcado como concedido sem verificação.`,
+        execution_id: execution.id,
+        logs: access.results.map((tool) => `${tool.name}: provisionamento planejado (simulado).`),
       }, 201);
     } catch {
-      return json({ detail: "E-mail ou notebook já está vinculado." }, 409);
+      return json({ detail: "Não foi possível criar o plano. Verifique se o e-mail já está cadastrado." }, 409);
     }
   }
 
   if (url.pathname === "/api/v1/offboarding") {
     const email = String(body.email || "").trim().toLowerCase();
-    const user = await env.DB.prepare("SELECT id, notebook_id FROM users WHERE email = ?").bind(email).first<{ id: number; notebook_id: number | null }>();
+    const user = await env.DB.prepare("SELECT id, notebook_id, profile_id, status FROM users WHERE email = ?")
+      .bind(email).first<{ id: number; notebook_id: number | null; profile_id: number | null; status: string }>();
     if (!user) return json({ detail: "Usuário não encontrado." }, 404);
-    const statements = [
-      env.DB.prepare("UPDATE users SET status = 'suspended' WHERE id = ?").bind(user.id),
-      env.DB.prepare("INSERT INTO audit_logs (target_user, action_type, details, created_at) VALUES (?, 'offboarding', ?, ?)").bind(email, JSON.stringify({ access_revoked: true }), now),
-    ];
+    const existing = await env.DB.prepare(`SELECT id, status FROM lifecycle_executions
+      WHERE user_id=? AND execution_type='OFFBOARDING' AND status NOT IN ('COMPLETED','CANCELLED') ORDER BY id DESC LIMIT 1`)
+      .bind(user.id).first<{ id: number; status: string }>();
+    if (existing) return json({ status: "existente", message: "Já existe um plano de desligamento em andamento.", execution_id: existing.id });
+    const execution = await env.DB.prepare(`INSERT INTO lifecycle_executions
+      (user_id, execution_type, status, requested_by, started_at, created_at)
+      VALUES (?, 'OFFBOARDING', 'RUNNING', ?, ?, ?) RETURNING id`)
+      .bind(user.id, authenticatedEmail, now, now).first<{ id: number }>();
+    if (!execution) return json({ detail: "Não foi possível criar o plano de desligamento." }, 500);
+    const assignments = await env.DB.prepare(`SELECT aa.tool_id, t.name FROM access_assignments aa
+      JOIN tools t ON t.id=aa.tool_id WHERE aa.user_id=? AND aa.expected_state='active' ORDER BY t.name`)
+      .bind(user.id).all<{ tool_id: number; name: string }>();
+    const statements = assignments.results.map((assignment) =>
+      env.DB.prepare(`INSERT INTO execution_steps
+        (execution_id, tool_id, step_key, label, method, status, assignee, attempts, verification_method, created_at)
+        VALUES (?, ?, ?, ?, 'SIMULATED', 'PLANNED', 'Equipe de TI', 0, 'Confirmação manual ou conector', ?)`)
+        .bind(execution.id, assignment.tool_id, `revoke:${assignment.tool_id}`, `Revogar ${assignment.name}`, now)
+    );
+    statements.push(
+      env.DB.prepare("UPDATE users SET status='offboarding' WHERE id=?").bind(user.id),
+      env.DB.prepare(`INSERT INTO execution_steps
+        (execution_id, step_key, label, method, status, assignee, attempts, verification_method, created_at)
+        VALUES (?, 'identity:disable', 'Desativar identidade central', 'SIMULATED', 'PLANNED', 'Equipe de Identidade', 0, 'Confirmação manual ou diretório', ?)`)
+        .bind(execution.id, now),
+      env.DB.prepare("INSERT INTO audit_logs (target_user, action_type, details, created_at) VALUES (?, 'offboarding_plan_created', ?, ?)")
+        .bind(email, JSON.stringify({ execution_id: execution.id, access_revoked: false }), now),
+    );
     if (user.notebook_id) {
       statements.push(
         env.DB.prepare("UPDATE notebooks SET status = 'return_requested', custody_location = 'Com ex-colaborador' WHERE id = ?").bind(user.notebook_id),
@@ -309,10 +459,19 @@ async function api(request: Request, env: Env) {
             `Recolher notebook de ${email}`, authenticatedEmail, now),
         env.DB.prepare("INSERT INTO asset_events (notebook_id, event_type, details, performed_by, created_at) VALUES (?, 'return_requested', ?, ?, ?)")
           .bind(user.notebook_id, `Devolução solicitada após offboarding de ${email}`, authenticatedEmail, now),
+        env.DB.prepare(`INSERT INTO execution_steps
+          (execution_id, step_key, label, method, status, assignee, attempts, verification_method, created_at)
+          VALUES (?, 'endpoint:return', 'Receber e validar endpoint', 'MANUAL', 'WAITING', 'Logística reversa', 0, 'Inspeção física e termo de recebimento', ?)`)
+          .bind(execution.id, now),
       );
     }
     await env.DB.batch(statements);
-    return json({ status: "sucesso", message: `Acessos de ${email} revogados.`, detalhe: "A devolução física do notebook foi aberta e aguarda recebimento." });
+    return json({
+      status: "sucesso",
+      message: `Plano de desligamento criado para ${email}.`,
+      detalhe: `${assignments.results.length} revogações aguardam execução e verificação.`,
+      execution_id: execution.id,
+    }, 201);
   }
 
   if (url.pathname === "/api/v1/access-requests") {
@@ -332,11 +491,22 @@ async function api(request: Request, env: Env) {
   if (url.pathname === "/api/v1/access-decisions") {
     const requestId = Number(body.request_id);
     const decision = body.decision === "approved" ? "approved" : "rejected";
+    const accessRequest = await env.DB.prepare("SELECT user_id, tool_id FROM access_requests WHERE id=? AND status='pending'")
+      .bind(requestId).first<{ user_id: number; tool_id: number }>();
+    if (!accessRequest) return json({ detail: "Solicitação pendente não encontrada." }, 404);
     await env.DB.prepare("UPDATE access_requests SET status=?, approved_by=? WHERE id=? AND status='pending'")
       .bind(decision, authenticatedEmail, requestId).run();
+    if (decision === "approved") {
+      await env.DB.prepare(`INSERT INTO access_assignments
+        (user_id, tool_id, source_type, source_id, expected_state, observed_state, verification_status, created_at, updated_at)
+        VALUES (?, ?, 'request', ?, 'active', 'unknown', 'unverified', ?, ?)
+        ON CONFLICT(user_id, tool_id) DO UPDATE SET expected_state='active', observed_state='unknown',
+        verification_status='unverified', source_type='request', source_id=excluded.source_id, updated_at=excluded.updated_at`)
+        .bind(accessRequest.user_id, accessRequest.tool_id, requestId, now, now).run();
+    }
     await env.DB.prepare("INSERT INTO audit_logs (target_user, action_type, details, created_at) VALUES (?, 'access_decision', ?, ?)")
       .bind(String(requestId), JSON.stringify({ decision, approved_by: authenticatedEmail }), now).run();
-    return json({ status: "sucesso", message: decision === "approved" ? "Acesso aprovado em modo simulado." : "Solicitação rejeitada.", detalhe: "O conector externo permanecerá inativo até receber credenciais." });
+    return json({ status: "sucesso", message: decision === "approved" ? "Acesso aprovado e registrado como esperado." : "Solicitação rejeitada.", detalhe: "O estado observado continuará desconhecido até execução e verificação." });
   }
 
   if (url.pathname === "/api/v1/recertifications") {
@@ -351,13 +521,74 @@ async function api(request: Request, env: Env) {
     const email = String(body.email || "").trim().toLowerCase();
     const role = String(body.role || "Auditor");
     if (!email) return json({ detail: "Informe o e-mail administrativo." }, 400);
-    const permissions: Record<string, string> = {
-      "Superadministrador": "all", "Administrador IAM": "users,profiles,requests",
-      "Gestor de área": "reviews,requests", "Gestor de ativos": "notebooks,assets,software", "Auditor": "read,audit",
-    };
+    if (!rolePermissions[role]) return json({ detail: "Função administrativa inválida." }, 400);
     await env.DB.prepare("INSERT OR REPLACE INTO admin_assignments (email, role, permissions, status) VALUES (?, ?, ?, 'active')")
-      .bind(email, role, permissions[role] || "read").run();
+      .bind(email, role, rolePermissions[role]).run();
     return json({ status: "sucesso", message: `${email} recebeu a função ${role}.` }, 201);
+  }
+
+  if (url.pathname === "/api/v1/execution-steps") {
+    const stepId = Number(body.step_id);
+    const action = String(body.action || "");
+    const evidence = String(body.evidence || "").trim();
+    const error = String(body.error || "").trim();
+    const step = await env.DB.prepare(`SELECT es.*, le.user_id, le.execution_type
+      FROM execution_steps es JOIN lifecycle_executions le ON le.id=es.execution_id WHERE es.id=?`)
+      .bind(stepId).first<{ id: number; execution_id: number; tool_id: number | null; method: string; status: string; user_id: number; execution_type: string }>();
+    if (!step) return json({ detail: "Etapa não encontrada." }, 404);
+    if (step.status === "VERIFIED") return json({ status: "existente", message: "Esta etapa já foi verificada." });
+
+    let nextStatus = "WAITING";
+    let nextMethod = step.method;
+    let verificationMethod: string | null = null;
+    let result: string | null = null;
+    if (action === "complete_manual") {
+      if (!evidence) return json({ detail: "Inclua uma evidência antes de concluir manualmente." }, 400);
+      nextStatus = "VERIFIED";
+      nextMethod = "MANUAL";
+      verificationMethod = "Evidência e confirmação manual";
+      result = "Concluído e verificado manualmente.";
+    } else if (action === "mark_failed") {
+      if (!error) return json({ detail: "Descreva o erro encontrado." }, 400);
+      nextStatus = "FAILED";
+      result = "Falha registrada; requer tratamento.";
+    } else if (action === "retry") {
+      nextStatus = "PLANNED";
+      result = "Nova tentativa planejada.";
+    } else {
+      return json({ detail: "Ação de etapa inválida." }, 400);
+    }
+
+    await env.DB.prepare(`UPDATE execution_steps SET method=?, status=?, attempts=attempts+1,
+      result=?, verification_method=COALESCE(?, verification_method), evidence=COALESCE(NULLIF(?,''), evidence),
+      error=COALESCE(NULLIF(?,''), error), started_at=COALESCE(started_at, ?),
+      completed_at=CASE WHEN ?='VERIFIED' THEN ? ELSE NULL END WHERE id=?`)
+      .bind(nextMethod, nextStatus, result, verificationMethod, evidence, error, now, nextStatus, now, stepId).run();
+
+    if (nextStatus === "VERIFIED" && step.tool_id) {
+      const expectedState = step.execution_type === "OFFBOARDING" ? "inactive" : "active";
+      await env.DB.prepare(`UPDATE access_assignments SET expected_state=?, observed_state=?,
+        verification_status='verified', last_verified_at=?, updated_at=? WHERE user_id=? AND tool_id=?`)
+        .bind(expectedState, expectedState, now, now, step.user_id, step.tool_id).run();
+      await env.DB.prepare(`UPDATE identity_accounts SET status=?, observed_status=?, last_verified_at=?
+        WHERE user_id=? AND tool_id=?`)
+        .bind(expectedState, expectedState, now, step.user_id, step.tool_id).run();
+    }
+
+    const remaining = await env.DB.prepare(`SELECT
+      SUM(CASE WHEN status!='VERIFIED' THEN 1 ELSE 0 END) AS pending,
+      SUM(CASE WHEN status='FAILED' THEN 1 ELSE 0 END) AS failed
+      FROM execution_steps WHERE execution_id=?`).bind(step.execution_id).first<{ pending: number; failed: number }>();
+    const executionStatus = Number(remaining?.pending || 0) === 0 ? "COMPLETED" : Number(remaining?.failed || 0) > 0 ? "PARTIAL" : "RUNNING";
+    await env.DB.prepare(`UPDATE lifecycle_executions SET status=?, completed_at=CASE WHEN ?='COMPLETED' THEN ? ELSE NULL END WHERE id=?`)
+      .bind(executionStatus, executionStatus, now, step.execution_id).run();
+    if (executionStatus === "COMPLETED") {
+      await env.DB.prepare("UPDATE users SET status=? WHERE id=?")
+        .bind(step.execution_type === "OFFBOARDING" ? "suspended" : "active", step.user_id).run();
+    }
+    await env.DB.prepare("INSERT INTO audit_logs (target_user, action_type, details, created_at) VALUES (?, 'execution_step_updated', ?, ?)")
+      .bind(String(step.user_id), JSON.stringify({ execution_id: step.execution_id, step_id: stepId, action, status: nextStatus, evidence: Boolean(evidence) }), now).run();
+    return json({ status: "sucesso", message: "Etapa atualizada.", detalhe: `Execução em estado ${executionStatus}.` });
   }
 
   if (url.pathname === "/api/v1/asset-lifecycle") {

@@ -71,7 +71,7 @@ export const connectors = sqliteTable("connectors", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull().unique(),
   category: text("category").notNull(),
-  status: text("status").notNull().default("ready"),
+  status: text("status").notNull().default("CATALOG_ONLY"),
   authType: text("auth_type").notNull(),
   description: text("description").notNull(),
 });
@@ -138,12 +138,69 @@ export const users = sqliteTable("users", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   department: text("department").notNull(),
-  deviceSerial: text("device_serial").notNull().unique(),
+  deviceSerial: text("device_serial").unique(),
   profileId: integer("profile_id").references(() => profiles.id),
   notebookId: integer("notebook_id").references(() => notebooks.id),
   status: text("status").notNull().default("active"),
   createdAt: text("created_at").notNull(),
 });
+
+export const identityAccounts = sqliteTable("identity_accounts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull().references(() => users.id),
+  toolId: integer("tool_id").notNull().references(() => tools.id),
+  accountIdentifier: text("account_identifier").notNull(),
+  status: text("status").notNull().default("planned"),
+  observedStatus: text("observed_status").notNull().default("unknown"),
+  lastVerifiedAt: text("last_verified_at"),
+  createdAt: text("created_at").notNull(),
+}, (table) => [uniqueIndex("identity_accounts_user_tool_unique").on(table.userId, table.toolId)]);
+
+export const accessAssignments = sqliteTable("access_assignments", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull().references(() => users.id),
+  toolId: integer("tool_id").notNull().references(() => tools.id),
+  accountId: integer("account_id").references(() => identityAccounts.id),
+  sourceType: text("source_type").notNull().default("profile"),
+  sourceId: integer("source_id"),
+  expectedState: text("expected_state").notNull(),
+  observedState: text("observed_state").notNull().default("unknown"),
+  verificationStatus: text("verification_status").notNull().default("unverified"),
+  lastVerifiedAt: text("last_verified_at"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => [uniqueIndex("access_assignments_user_tool_unique").on(table.userId, table.toolId)]);
+
+export const lifecycleExecutions = sqliteTable("lifecycle_executions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull().references(() => users.id),
+  executionType: text("execution_type").notNull(),
+  status: text("status").notNull().default("PLANNED"),
+  requestedBy: text("requested_by").notNull(),
+  startedAt: text("started_at"),
+  completedAt: text("completed_at"),
+  createdAt: text("created_at").notNull(),
+});
+
+export const executionSteps = sqliteTable("execution_steps", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  executionId: integer("execution_id").notNull().references(() => lifecycleExecutions.id),
+  toolId: integer("tool_id").references(() => tools.id),
+  stepKey: text("step_key").notNull(),
+  label: text("label").notNull(),
+  method: text("method").notNull(),
+  status: text("status").notNull().default("PLANNED"),
+  assignee: text("assignee").notNull(),
+  dueAt: text("due_at"),
+  attempts: integer("attempts").notNull().default(0),
+  result: text("result"),
+  verificationMethod: text("verification_method"),
+  evidence: text("evidence"),
+  error: text("error"),
+  startedAt: text("started_at"),
+  completedAt: text("completed_at"),
+  createdAt: text("created_at").notNull(),
+}, (table) => [uniqueIndex("execution_steps_execution_key_unique").on(table.executionId, table.stepKey)]);
 
 export const auditLogs = sqliteTable("audit_logs", {
   id: integer("id").primaryKey({ autoIncrement: true }),

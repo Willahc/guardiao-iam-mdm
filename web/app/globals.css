@@ -1249,3 +1249,99 @@ footer {
     padding: 20px 16px 90px;
   }
 }
+
+/* Lifecycle product surfaces */
+.lifecycleModule { gap: 16px; }
+.lifecycleStats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border: 1px solid var(--console-border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--console-surface);
+}
+.lifecycleStats div {
+  min-height: 76px;
+  padding: 14px 18px;
+  display: grid;
+  align-content: center;
+  gap: 3px;
+  border-right: 1px solid var(--console-border);
+}
+.lifecycleStats div:last-child { border-right: 0; }
+.lifecycleStats strong { font-size: 24px; }
+.lifecycleStats span { color: var(--console-muted); font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; }
+.executionList { display: grid; }
+.executionRow {
+  display: grid;
+  grid-template-columns: minmax(230px, 1fr) minmax(220px, .8fr) auto;
+  gap: 24px;
+  align-items: center;
+  padding: 15px 18px;
+  border-top: 1px solid var(--console-border);
+}
+.executionRow:first-child { border-top: 0; }
+.executionRow > div:first-child { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: center; }
+.executionRow strong, .executionRow small { grid-column: 2; display: block; }
+.executionRow small { color: var(--console-muted); font-size: 9px; }
+.executionType, .executionStatus, .methodTag, .stepStatus, .verification, .stateValue {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 5px 7px;
+  border-radius: 3px;
+  font-size: 8px;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.executionType { grid-row: 1 / 3; background: var(--console-subtle); color: var(--console-muted); }
+.executionType.offboarding { color: var(--console-red); }
+.executionProgress { display: grid; gap: 7px; color: var(--console-muted); font-size: 9px; }
+.executionProgress i { height: 4px; overflow: hidden; border-radius: 2px; background: var(--console-border); }
+.executionProgress em { display: block; height: 100%; background: var(--console-red); }
+.executionStatus, .stepStatus { background: var(--console-subtle); color: var(--console-muted); }
+.executionStatus.completed, .stepStatus.verified, .verification.verified { color: #168758; background: color-mix(in srgb, #168758 12%, var(--console-surface)); }
+.executionStatus.partial, .stepStatus.failed { color: var(--console-red); background: color-mix(in srgb, var(--console-red) 10%, var(--console-surface)); }
+.stepBoard { display: grid; }
+.executionStep { padding: 15px 18px; border-top: 1px solid var(--console-border); }
+.executionStep:first-child { border-top: 0; }
+.executionStep.failed { box-shadow: inset 3px 0 var(--console-red); }
+.stepMain { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; }
+.stepMain div { display: grid; gap: 3px; }
+.stepMain small { color: var(--console-muted); font-size: 9px; }
+.methodTag.simulated { color: #a76d00; background: rgba(200,145,20,.12); }
+.methodTag.manual { color: #326cb2; background: rgba(50,108,178,.12); }
+.methodTag.automatic { color: #168758; background: rgba(22,135,88,.12); }
+.stepContext { margin: 11px 0 0 0; padding: 9px 11px; display: flex; flex-wrap: wrap; gap: 10px; background: var(--console-subtle); color: var(--console-muted); font-size: 9px; }
+.stepContext b { color: var(--console-red); }
+.stepActionForm {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto auto auto;
+  gap: 7px;
+}
+.stepActionForm input, .stepActionForm button { min-height: 34px; }
+.stepActionForm .secondary { padding-inline: 11px; }
+.mutedValue { color: var(--console-muted); font-size: 10px; }
+.stateValue { color: var(--console-text); background: var(--console-subtle); }
+.stateValue.observed { color: #a76d00; }
+.verification { color: #a76d00; background: rgba(200,145,20,.12); }
+.badge.onboarding { color: #326cb2; }
+.badge.onboarding::before { background: #326cb2; }
+.badge.offboarding { color: #a76d00; }
+.badge.offboarding::before { background: #a76d00; }
+
+@media (max-width: 900px) {
+  .lifecycleStats { grid-template-columns: 1fr 1fr; }
+  .lifecycleStats div:nth-child(2) { border-right: 0; }
+  .lifecycleStats div:nth-child(-n + 2) { border-bottom: 1px solid var(--console-border); }
+  .executionRow { grid-template-columns: 1fr; gap: 10px; }
+  .stepActionForm { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 560px) {
+  .stepMain { grid-template-columns: auto 1fr; }
+  .stepStatus { grid-column: 2; }
+  .stepActionForm { grid-template-columns: 1fr; }
+}

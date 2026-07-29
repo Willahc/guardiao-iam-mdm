@@ -25,9 +25,11 @@ test("renders the Guardião control plane", async () => {
   const html = await response.text();
   assert.match(html, /Guardião/);
   assert.match(html, /Pessoas/);
-  assert.match(html, /e ciclo de vida/);
-  assert.match(html, /Entrada e desligamento/);
-  assert.match(html, /Perfis e permissões/);
-  assert.match(html, /Notebooks e compliance/);
+  assert.match(html, /e acessos/);
+  assert.match(html, /Lifecycle/);
+  assert.match(html, /Dispositivos opcionais/);
+  assert.match(html, /Identidades e acessos/);
+  assert.match(html, /Ferramentas esperadas/);
+  assert.match(html, /Dispositivos opcionais/);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/);
 });
