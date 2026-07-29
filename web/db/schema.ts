@@ -115,7 +115,7 @@ export const installedApplications = sqliteTable("installed_applications", {
   publisher: text("publisher").notNull(),
   policyStatus: text("policy_status").notNull().default("allowed"),
   detectedAt: text("detected_at").notNull(),
-});
+}, (table) => [uniqueIndex("installed_applications_notebook_name_unique").on(table.notebookId, table.name)]);
 
 export const softwareCommands = sqliteTable("software_commands", {
   id: integer("id").primaryKey({ autoIncrement: true }),

@@ -124,12 +124,21 @@ async function initialize(db: D1Database) {
     db.prepare("INSERT OR IGNORE INTO connectors (name, category, auth_type, description) VALUES ('Intune / MDM', 'Dispositivos', 'OAuth 2.0', 'Compliance, bloqueio e inventário')"),
     db.prepare("INSERT OR IGNORE INTO connectors (name, category, auth_type, description) VALUES ('RH / Folha', 'Pessoas', 'Webhook assinado', 'Admissão, movimentação e desligamento')"),
     db.prepare("INSERT OR IGNORE INTO connectors (name, category, auth_type, description) VALUES ('Service Desk', 'Workflow', 'API Token', 'Chamados, aprovações e evidências')"),
-    db.prepare(`INSERT OR IGNORE INTO installed_applications (notebook_id, name, version, publisher, policy_status, detected_at)
-      SELECT id, 'Microsoft 365 Apps', '2406', 'Microsoft', 'allowed', datetime('now') FROM notebooks ORDER BY id LIMIT 1`),
-    db.prepare(`INSERT OR IGNORE INTO installed_applications (notebook_id, name, version, publisher, policy_status, detected_at)
-      SELECT id, 'Google Chrome', '126.0', 'Google', 'allowed', datetime('now') FROM notebooks ORDER BY id LIMIT 1`),
-    db.prepare(`INSERT OR IGNORE INTO installed_applications (notebook_id, name, version, publisher, policy_status, detected_at)
-      SELECT id, 'AnyDesk', '8.0', 'AnyDesk Software', 'prohibited', datetime('now') FROM notebooks ORDER BY id LIMIT 1`),
+    db.prepare(`INSERT INTO installed_applications (notebook_id, name, version, publisher, policy_status, detected_at)
+      SELECT n.id, 'Microsoft 365 Apps', '2406', 'Microsoft', 'allowed', datetime('now')
+      FROM notebooks n WHERE NOT EXISTS (
+        SELECT 1 FROM installed_applications ia WHERE ia.notebook_id=n.id AND ia.name='Microsoft 365 Apps'
+      ) ORDER BY n.id LIMIT 1`),
+    db.prepare(`INSERT INTO installed_applications (notebook_id, name, version, publisher, policy_status, detected_at)
+      SELECT n.id, 'Google Chrome', '126.0', 'Google', 'allowed', datetime('now')
+      FROM notebooks n WHERE NOT EXISTS (
+        SELECT 1 FROM installed_applications ia WHERE ia.notebook_id=n.id AND ia.name='Google Chrome'
+      ) ORDER BY n.id LIMIT 1`),
+    db.prepare(`INSERT INTO installed_applications (notebook_id, name, version, publisher, policy_status, detected_at)
+      SELECT n.id, 'AnyDesk', '8.0', 'AnyDesk Software', 'prohibited', datetime('now')
+      FROM notebooks n WHERE NOT EXISTS (
+        SELECT 1 FROM installed_applications ia WHERE ia.notebook_id=n.id AND ia.name='AnyDesk'
+      ) ORDER BY n.id LIMIT 1`),
   ]);
 }
 

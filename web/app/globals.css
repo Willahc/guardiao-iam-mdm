@@ -332,12 +332,13 @@ main {
 .adminMenu { order: 1; padding: 15px 0 0; border-left: 0; border-top: 1px solid rgba(255,255,255,.1); }
 .adminAvatar { background: var(--red); color: white; }.adminMenu small, .adminMenu a { color: #8f9298; }.adminMenu strong { color: #f5f5f6; }
 .moduleTabs {
-  position: fixed; z-index: 31; left: 0; top: 112px; width: 248px; margin: 0; padding: 16px 12px;
-  display: flex; flex-direction: column; border: 0; background: transparent;
+  position: fixed; z-index: 31; left: 0; top: 112px; bottom: 154px; width: 248px; margin: 0; padding: 12px;
+  display: flex; flex-direction: column; border: 0; background: transparent; overflow-y: auto;
+  scrollbar-width: thin; scrollbar-color: #4a4d52 transparent;
 }
 .moduleTabs > p { margin: 12px 12px 7px; color: #a9adb3; font-size: 8px; font-weight: 900; letter-spacing: .17em; }
 .moduleTabs button {
-  min-height: 60px; width: 100%; padding: 9px 11px; display: grid; grid-template-columns: 32px 1fr auto;
+  min-height: 54px; width: 100%; padding: 7px 11px; display: grid; grid-template-columns: 32px 1fr auto;
   align-items: center; gap: 10px; text-align: left; border: 0; border-radius: 8px; color: #c2c5ca; background: transparent;
   text-transform: none; letter-spacing: 0;
 }
@@ -400,13 +401,13 @@ footer { margin-left: 0; background: transparent; color: var(--muted); border-to
 
 @media (max-width: 1050px) {
   main { padding-left: 76px; }.topbar { width: 76px; padding: 22px 12px; }.brandBlock { padding: 0 8px 20px; }.brand > span:nth-child(2), .brandBlock > small, .adminMenu div, .adminMenu a, .themeToggle { display: none; }
-  .adminMenu { justify-content: center; }.moduleTabs { width: 76px; padding: 14px 9px; }.moduleTabs > p, .moduleTabs button > span:nth-child(2), .moduleTabs button b { display: none; }
+  .adminMenu { justify-content: center; }.moduleTabs { width: 76px; padding: 14px 9px; bottom: 96px; }.moduleTabs > p, .moduleTabs button > span:nth-child(2), .moduleTabs button b { display: none; }
   .moduleTabs button { grid-template-columns: 1fr; justify-items: center; padding: 8px; }.moduleTabs .navIcon { width: 36px; height: 36px; }
   .hero, .module { padding-left: 28px; padding-right: 28px; }.moduleTabs { margin: 0; }
 }
 @media (max-width: 760px) {
   main { padding: 0 0 76px; }.topbar { position: sticky; width: 100%; height: 64px; padding: 10px 16px; flex-direction: row; align-items: center; }.brandBlock { border: 0; padding: 0; }.brand > span:nth-child(2) { display: inline; }.headerActions { margin: 0 0 0 auto; flex-direction: row; }.adminMenu { border: 0; padding: 0; }
-  .moduleTabs { position: fixed; left: 0; right: 0; top: auto; bottom: 0; width: 100%; height: 70px; padding: 7px 8px; flex-direction: row; justify-content: space-around; background: var(--nav); border-top: 1px solid rgba(255,255,255,.1); }
+  .moduleTabs { position: fixed; left: 0; right: 0; top: auto; bottom: 0; width: 100%; height: 70px; padding: 7px 8px; flex-direction: row; justify-content: space-around; overflow: visible; background: var(--nav); border-top: 1px solid rgba(255,255,255,.1); }
   .moduleTabs > p { display: none; }.moduleTabs button { width: auto; min-width: 58px; min-height: 54px; border-radius: 7px; }.moduleTabs button.active { box-shadow: inset 0 -3px var(--red); }
   .hero { grid-template-columns: 1fr; padding: 30px 18px 20px; }.statusCard { grid-template-columns: 1fr 1fr; }.pulse { grid-column: 1 / -1; }.module { padding: 0 14px 40px; }
   .flowRail { overflow-x: auto; grid-template-columns: repeat(9, max-content); }.confirmBar, .notice { margin-left: 14px; margin-right: 14px; }
