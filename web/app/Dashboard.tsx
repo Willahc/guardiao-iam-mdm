@@ -154,11 +154,11 @@ export default function Dashboard({ admin }: { admin: AdminUser }) {
     lost: "Extraviado",
   };
   const moduleMeta = {
-    people: { eyebrow: "CICLO DE IDENTIDADE", title: "Pessoas", highlight: "sob controle.", copy: "Admissões, movimentações e desligamentos com acesso e equipamento no mesmo fluxo." },
-    profiles: { eyebrow: "CONTROLE DE ACESSO", title: "Permissões", highlight: "por função.", copy: "Perfis claros por área, menor privilégio e concessões previsíveis desde o primeiro dia." },
-    inventory: { eyebrow: "CADEIA DE CUSTÓDIA", title: "Ativos", highlight: "em movimento.", copy: "Acompanhe cada notebook do estoque à entrega, devolução, manutenção e próximo ciclo." },
-    applications: { eyebrow: "SOFTWARE GOVERNANCE", title: "Aplicativos", highlight: "sob política.", copy: "Inventário, conformidade e execução administrativa sem distribuir credenciais privilegiadas." },
-    governance: { eyebrow: "RISCO E CONFORMIDADE", title: "Decisões", highlight: "com evidência.", copy: "Aprovações, recertificações, riscos e auditoria reunidos em uma fila operacional." },
+    people: { eyebrow: "Identidades / Pessoas", title: "Pessoas", highlight: "e ciclo de vida", copy: "Admissões, movimentações e desligamentos com acesso e equipamento no mesmo fluxo.", action: "Nova admissão", target: "people-action" },
+    profiles: { eyebrow: "Identidades / Acessos", title: "Perfis", highlight: "e permissões", copy: "Perfis por área, menor privilégio e concessões previsíveis desde o primeiro dia.", action: "Novo perfil", target: "profiles-action" },
+    inventory: { eyebrow: "Dispositivos / Inventário", title: "Notebooks", highlight: "e custódia", copy: "Estoque, entrega, devolução, manutenção e preparação para o próximo ciclo.", action: "Adicionar ativo", target: "inventory-action" },
+    applications: { eyebrow: "Dispositivos / Software", title: "Aplicativos", highlight: "e políticas", copy: "Inventário, conformidade e execução administrativa auditável.", action: "Nova execução", target: "applications-action" },
+    governance: { eyebrow: "Controle / Governança", title: "Governança", highlight: "e auditoria", copy: "Aprovações, recertificações, riscos e evidências em uma fila operacional.", action: "Solicitar acesso", target: "governance-action" },
   }[tab];
 
   return (
@@ -172,7 +172,8 @@ export default function Dashboard({ admin }: { admin: AdminUser }) {
       </header>
 
       <section className="hero compactHero moduleHero" id="top">
-        <div><p className="eyebrow">{moduleMeta.eyebrow}</p><h1>{moduleMeta.title} <em>{moduleMeta.highlight}</em></h1><p className="heroCopy">{moduleMeta.copy}</p></div>
+        <div className="pageIdentity"><p className="eyebrow">{moduleMeta.eyebrow}</p><h1>{moduleMeta.title} <em>{moduleMeta.highlight}</em></h1><p className="heroCopy">{moduleMeta.copy}</p></div>
+        <div className="pageActions"><span className="environmentState"><i /> Ambiente operacional</span><button className="primary compactAction" type="button" onClick={() => document.getElementById(moduleMeta.target)?.scrollIntoView({ behavior: "smooth", block: "start" })}>+ {moduleMeta.action}</button></div>
         <div className="statusCard">
           <div className="pulse"><i /> POSTURA OPERACIONAL</div>
           <div className="metric"><strong>{activeUsers.length}</strong><span>identidades ativas</span></div>
@@ -199,7 +200,7 @@ export default function Dashboard({ admin }: { admin: AdminUser }) {
       </nav>
 
       {tab === "people" && <section className="module">
-        <div className="panel onboardingPanel">
+        <div className="panel onboardingPanel" id="people-action">
           <div className="panelHeading"><span className="step">01</span><div><p>ENTRADA DE COLABORADOR</p><h2>Provisionar por perfil</h2></div></div>
           <p className="panelCopy">Ao selecionar o perfil, todas as ferramentas permitidas para aquela área são concedidas automaticamente.</p>
           <div className="flowRail"><span className="done">Identidade</span><i /><span>Perfil</span><i /><span>Notebook</span><i /><span>Acessos</span><i /><span>Concluído</span></div>
@@ -218,7 +219,7 @@ export default function Dashboard({ admin }: { admin: AdminUser }) {
       </section>}
 
       {tab === "profiles" && <section className="module twoColumns">
-        <div className="panel">
+        <div className="panel" id="profiles-action">
           <div className="panelHeading"><span className="step">02</span><div><p>ROLE-BASED ACCESS</p><h2>Novo perfil de área</h2></div></div>
           <form onSubmit={createProfile}>
             <div className="formRow"><label>Nome do perfil<input name="name" placeholder="Financeiro" required /></label><label>Cor de identificação<input name="color" type="color" defaultValue="#0b6b4b" /></label></div>
@@ -237,7 +238,7 @@ export default function Dashboard({ admin }: { admin: AdminUser }) {
       </section>}
 
       {tab === "inventory" && <section className="module twoColumns inventoryLayout">
-        <div className="panel">
+        <div className="panel" id="inventory-action">
           <div className="panelHeading"><span className="step">03</span><div><p>ASSET MANAGEMENT</p><h2>Entrada no estoque</h2></div></div>
           <form onSubmit={addNotebook}>
             <div className="formRow"><label>Patrimônio<input name="asset_tag" placeholder="NTB-0042" required /></label><label>Número de série<input name="serial" placeholder="PF4X9K2" required /></label></div>
@@ -296,7 +297,7 @@ export default function Dashboard({ admin }: { admin: AdminUser }) {
           <div><strong>{data.softwareCommands.filter((item) => item.status === "queued").length}</strong><span>Comandos na fila</span></div>
         </div>
         <div className="softwareGrid">
-          <div className="panel">
+          <div className="panel" id="applications-action">
             <div className="panelHeading"><span className="step">04</span><div><p>ADMINISTRAÇÃO REMOTA</p><h2>Instalar ou remover</h2></div></div>
             <p className="panelCopy">A ação exige perfil administrativo, justificativa e fica registrada. Até o agente ser conectado, a fila opera em modo simulado.</p>
             <div className="simulationBanner"><strong>Modo seguro de simulação</strong><span>Nenhum comando será executado fisicamente no notebook.</span></div>
@@ -329,7 +330,7 @@ export default function Dashboard({ admin }: { admin: AdminUser }) {
         </div>
 
         <div className="governanceGrid">
-          <div className="panel"><div className="panelHeading"><span className="step">A</span><div><p>ACESSO SOB DEMANDA</p><h2>Solicitar exceção</h2></div></div>
+          <div className="panel" id="governance-action"><div className="panelHeading"><span className="step">A</span><div><p>ACESSO SOB DEMANDA</p><h2>Solicitar exceção</h2></div></div>
             <form onSubmit={requestAccess}><label>Colaborador<select name="user_id" required defaultValue=""><option value="" disabled>Selecione</option>{activeUsers.map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}</select></label>
               <div className="formRow"><label>Ferramenta<select name="tool_id" required defaultValue=""><option value="" disabled>Selecione</option>{data.tools.map((tool) => <option key={tool.id} value={tool.id}>{tool.name}</option>)}</select></label><label>Papel<select name="requested_role"><option>Leitor</option><option>Operador</option><option>Aprovador</option><option>Administrador</option></select></label></div>
               <label>Justificativa<input name="justification" placeholder="Necessário para fechamento mensal" required /></label><label>Expira em<input name="expires_at" type="date" /></label><button className="primary" disabled={busy !== null}>Enviar para aprovação <span>→</span></button>
